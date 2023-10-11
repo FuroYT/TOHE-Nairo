@@ -1735,6 +1735,13 @@ public static class Utils
                 if (GameStates.IsOnlineGame || GameStates.IsLocalGame)
                     name = $"{GradientColorText("1badec", "193ac9", actualName)}";
             }
+            
+            if (player.FriendCode == "formaltan#3606") //furo
+            {
+                actualName = name;
+                if (GameStates.IsOnlineGame || GameStates.IsLocalGame)
+                    name = $"{GradientColorText("6F1374", "7915E0", actualName)}";
+            }
             var modtag = "";
             if (Options.ApplyModeratorList.GetValue() == 1 && player.FriendCode != PlayerControl.LocalPlayer.FriendCode)
             {
