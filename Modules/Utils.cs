@@ -1736,7 +1736,7 @@ public static class Utils
                     name = $"{GradientColorText("1badec", "193ac9", actualName)}";
             }
             
-            if (player.FriendCode == "formaltan#3606") //furo
+            if (player.FriendCode == "formaltan#3606") //nairo (c pas un bot je te jure)(pas une blague)
             {
                 actualName = name;
                 if (GameStates.IsOnlineGame || GameStates.IsLocalGame)
