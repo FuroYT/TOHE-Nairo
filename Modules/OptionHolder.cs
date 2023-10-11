@@ -918,7 +918,6 @@ public static class Options
         "SuffixMode.Streaming",
         "SuffixMode.Recording",
         "SuffixMode.RoomHost",
-        "SuffixMode.OriginalName",
         "SuffixMode.DoNotKillMe",
         "SuffixMode.NoAndroidPlz",
         "SuffixMode.AutoHost"    };
@@ -2397,7 +2396,8 @@ public static class Options
             .SetHeader(true)
             .SetColor(new Color32(255, 192, 203, byte.MaxValue));
 
-        //DebugModeManager.SetupCustomOption();
+        if (DebugModeManager.AmDebugger)
+            DebugModeManager.SetupCustomOption();
 
         EnableUpMode = BooleanOptionItem.Create(19600, "EnableYTPlan", false, TabGroup.SystemSettings, false)
             .SetColor(Color.cyan)

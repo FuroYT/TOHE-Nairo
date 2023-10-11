@@ -18,6 +18,8 @@ public static class MainMenuManagerPatch
     private static PassiveButton gitHubButton;
     private static PassiveButton discordButton;
     private static PassiveButton websiteButton;
+    private static PassiveButton twitchButton;
+    private static PassiveButton nairoDiscordButton;
     //private static PassiveButton patreonButton;
 
     [HarmonyPatch(typeof(MainMenuManager), nameof(MainMenuManager.LateUpdate)), HarmonyPostfix]
@@ -63,7 +65,9 @@ public static class MainMenuManagerPatch
         GameObject splashArt = new("SplashArt");
         splashArt.transform.position = new Vector3(0, 0f, 600f); //= new Vector3(0, 0.40f, 600f);
         var spriteRenderer = splashArt.AddComponent<SpriteRenderer>();
-        spriteRenderer.sprite = Utils.LoadSprite("TOHE.Resources.Background.TOH-RE-Background-New.png", 150f);
+        string bgImage = "TOH-RE-Background-New.png";
+        if (Main.oldMainMenuBg.Value) bgImage = "TOH-RE-Background-Unused.png";
+        spriteRenderer.sprite = Utils.LoadSprite($"TOHE.Resources.Background.{bgImage}", 150f);
 
 
         //__instance.playLocalButton.inactiveSprites.GetComponent<SpriteRenderer>().color = new Color(0.1647f, 0f, 0.7765f);
@@ -143,6 +147,31 @@ public static class MainMenuManagerPatch
 
         if (template == null) return;
 
+        // Twitch Button
+        if (twitchButton == null)
+        {
+            twitchButton = CreateButton(
+                "TwitchButton",
+                new(-0.1f, -2.3f, 1f),
+                new(84, 0, 98, byte.MaxValue),
+                new(215, 0, 248, byte.MaxValue),
+                () => Application.OpenURL(Main.nairoUrls[0]),
+                "Twitch Naïro");
+        }
+        twitchButton.gameObject.SetActive(Main.nairoVisible[0]);
+
+        // Nairo Discord Button
+        if (nairoDiscordButton == null)
+        {
+            nairoDiscordButton = CreateButton(
+                "NairoDiscordButton",
+                new(-0.1f, -1.9f, 1f),
+                new(88, 101, 242, byte.MaxValue),
+                new(148, 161, byte.MaxValue, byte.MaxValue),
+                () => Application.OpenURL(Main.nairoUrls[1]),
+                "Discord Naïro");
+        }
+        nairoDiscordButton.gameObject.SetActive(Main.nairoVisible[1]);
 
         // GitHub Button
         if (gitHubButton == null)

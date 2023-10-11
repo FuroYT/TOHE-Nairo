@@ -36,10 +36,14 @@ public class Main : BasePlugin
     public static readonly string MainMenuText = " ";
 
     public const string PluginGuid = "com.karped1em.townofhostedited";
-    public const string PluginVersion = "1.0.0";
-    public const string PluginDisplayVersion = "1.0.0";
+    public const string PluginVersion = "1.0.1";
+    public const string PluginDisplayVersion = "1.0.1";
+    public const string PluginEditVersion = "1.0.2";
     public static readonly string SupportedVersionAU = "2023.7.11";
     public const bool Canary = false;
+
+    public static readonly string[] nairoUrls = new string[] { "https://www.twitch.tv/arcade_nairo", "https://discord.gg/wD2e2t8MjN" };
+    public static readonly bool[] nairoVisible = new bool[] { true, true };
 
     public static readonly bool ShowGitHubButton = true;
     public static readonly string GitHubInviteUrl = "https://github.com/0xDrMoe/TownofHost-Enhanced";
@@ -67,6 +71,8 @@ public class Main : BasePlugin
     public static ConfigEntry<string> HideColor { get; private set; }
     public static ConfigEntry<int> MessageWait { get; private set; }
     public static ConfigEntry<bool> UnlockFPS { get; private set; }
+    public static ConfigEntry<bool> StreamerMode { get; private set; }
+    public static ConfigEntry<bool> oldMainMenuBg { get; private set; }
     public static ConfigEntry<bool> ShowFPS { get; private set; }
     public static ConfigEntry<bool> EnableGM { get; private set; }
     public static ConfigEntry<bool> AutoStart { get; private set; }
@@ -254,6 +260,8 @@ public class Main : BasePlugin
         DebugKeyInput = Config.Bind("Authentication", "Debug Key", "");
         AutoStart = Config.Bind("Client Options", "AutoStart", false);
         UnlockFPS = Config.Bind("Client Options", "UnlockFPS", false);
+        StreamerMode = Config.Bind("Client Options", "StreamerMode", false);
+        oldMainMenuBg = Config.Bind("Client Options", "oldMainMenuBg", false);
         ShowFPS = Config.Bind("Client Options", "ShowFPS", false);
         EnableGM = Config.Bind("Client Options", "EnableGM", false);
         AutoStart = Config.Bind("Client Options", "AutoStart", false);
@@ -1008,7 +1016,6 @@ public enum SuffixModes
     Streaming,
     Recording,
     RoomHost,
-    OriginalName,
     DoNotKillMe,
     NoAndroidPlz,
     AutoHost

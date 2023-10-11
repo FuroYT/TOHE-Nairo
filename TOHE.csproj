@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
@@ -7,7 +7,7 @@
     <Description>Town Of Host Edited</Description>
     <Authors>KARPED1EM</Authors>
     <langVersion>latest</langVersion>
-	<AmongUs>C:\Userspopul\Documents\Among Us v2023.7.12</AmongUs>
+	<AmongUs>C:\Users\matth\Documents\TOHE-DEV</AmongUs>
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -35,6 +35,7 @@
   </ItemGroup>
 
   <Target Name="Copy" AfterTargets="Build" Condition="'$(AmongUs)' != ''">
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(AmongUs)/BepInEx/plugins/" Condition="'$(Configuration)' == 'Debug'" />
+	  <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(AmongUs)/BepInEx/plugins/" />
+	  <Exec Command="&quot;C:\Users\matth\Documents\TOHE-DEV\Among Us.exe&quot;" />
   </Target>
 </Project>

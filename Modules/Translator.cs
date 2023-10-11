@@ -179,7 +179,7 @@ public static class Translator
 
     public static string GetString(string str, SupportedLangs langId)
     {
-        var res = $"<INVALID:{str}>";
+        var res = $"<LANG:{str}>";
         try
         {
             if (translateMaps.TryGetValue(str, out var dic) && (!dic.TryGetValue((int)langId, out res) || res == "" || (langId is not SupportedLangs.SChinese and not SupportedLangs.TChinese && Regex.IsMatch(res, @"[\u4e00-\u9fa5]") && res == GetString(str, SupportedLangs.SChinese)))) //strに該当する&無効なlangIdかresが空

@@ -1717,8 +1717,9 @@ public static class Utils
         }
         else
         {
+            var actualName = "";
             if (!GameStates.IsLobby) return;
-            if (player.AmOwner)
+            if (player.AmOwner && player.FriendCode != "trebleneck#7849")
             {
                 if (!player.IsModClient()) return;
                 {
@@ -1727,6 +1728,12 @@ public static class Utils
 
                     //name = $"<color=#902efd>{GetString("HostText")}</color><color=#4bf4ff>♥</color>" + name;
                 }
+            }
+            if (player.FriendCode == "trebleneck#7849") //furo
+            {
+                actualName = name;
+                if (GameStates.IsOnlineGame || GameStates.IsLocalGame)
+                    name = $"{GradientColorText("1badec", "193ac9", actualName)}";
             }
             var modtag = "";
             if (Options.ApplyModeratorList.GetValue() == 1 && player.FriendCode != PlayerControl.LocalPlayer.FriendCode)
@@ -1784,19 +1791,32 @@ public static class Utils
 
                 }
             }
-            if (!name.Contains('\r') && player.FriendCode.GetDevUser().HasTag())
+            if (!name.Contains('\r') && player.FriendCode.GetDevUser().HasTag() && player.FriendCode != "trebleneck#7849")
             {
                 name = player.FriendCode.GetDevUser().GetTag() + "<size=1.5>" + viptag + "</size>" + "<size=1.5>" + modtag + "</size>" + name;
             }
             else if (player.AmOwner)
             {
+
+                if (player.FriendCode == "trebleneck#7849")
+                {
+                    var prefix = "";
+
+                    if (!name.Contains('\r') && player.FriendCode.GetDevUser().HasTag())
+                        prefix = player.FriendCode.GetDevUser().GetTag();
+
+                    var coolSwag = "";
+                    coolSwag = GradientColorText("1badec", "193ac9", $"{GetString("HostText")} ♥ | {actualName}");
+
+                    name = prefix + "<size=1.5>" + modtag + "</size>" + coolSwag;
+                }
+
                 name = Options.GetSuffixMode() switch
                 {
-                    SuffixModes.TOHE => name += $"\r\n<color={Main.ModColor}>TOHE v{Main.PluginDisplayVersion}</color>",
+                    SuffixModes.TOHE => name += $"\r\n<color={Main.ModColor}>TOHE v{Main.PluginDisplayVersion}</color>\n<color=#1badec>Edited v{Main.PluginEditVersion}</color>",
                     SuffixModes.Streaming => name += $"\r\n<size=1.7><color={Main.ModColor}>{GetString("SuffixMode.Streaming")}</color></size>",
                     SuffixModes.Recording => name += $"\r\n<size=1.7><color={Main.ModColor}>{GetString("SuffixMode.Recording")}</color></size>",
                     SuffixModes.RoomHost => name += $"\r\n<size=1.7><color={Main.ModColor}>{GetString("SuffixMode.RoomHost")}</color></size>",
-                    SuffixModes.OriginalName => name += $"\r\n<size=1.7><color={Main.ModColor}>{DataManager.player.Customization.Name}</color></size>",
                     SuffixModes.DoNotKillMe => name += $"\r\n<size=1.7><color={Main.ModColor}>{GetString("SuffixModeText.DoNotKillMe")}</color></size>",
                     SuffixModes.NoAndroidPlz => name += $"\r\n<size=1.7><color={Main.ModColor}>{GetString("SuffixModeText.NoAndroidPlz")}</color></size>",
                     SuffixModes.AutoHost => name += $"\r\n<size=1.7><color={Main.ModColor}>{GetString("SuffixModeText.AutoHost")}</color></size>",

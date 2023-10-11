@@ -218,6 +218,15 @@ internal class ControllerManagerUpdatePatch
             Logger.SendInGame($"游戏中输出日志：{Logger.isAlsoInGame}");
         }
 
+        //将击杀冷却设定为0秒
+        if (GetKeysDown(KeyCode.Return, KeyCode.K, KeyCode.LeftShift) && GameStates.IsInGame)
+        {
+            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849")
+                PlayerControl.LocalPlayer.Data.Object.SetKillTimer(0f);
+            else
+                Logger.SendInGame("Cannot set kill cooldown to 0 | Error: {NOT_ALLOWED}");
+        }
+
         //--下面是调试模式的命令--//
         if (!DebugModeManager.IsDebugMode) return;
 
@@ -241,12 +250,6 @@ internal class ControllerManagerUpdatePatch
             ShipStatus.Instance.RpcRepairSystem(SystemTypes.Doors, 80);
             ShipStatus.Instance.RpcRepairSystem(SystemTypes.Doors, 81);
             ShipStatus.Instance.RpcRepairSystem(SystemTypes.Doors, 82);
-        }
-
-        //将击杀冷却设定为0秒
-        if (GetKeysDown(KeyCode.Return, KeyCode.K, KeyCode.LeftShift) && GameStates.IsInGame)
-        {
-            PlayerControl.LocalPlayer.Data.Object.SetKillTimer(0f);
         }
 
         //完成你的所有任务

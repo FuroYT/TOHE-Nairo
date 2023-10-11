@@ -25,6 +25,11 @@ public static class Credentials
 
             sb.Append(Main.credentialsText);
 
+            if (Main.StreamerMode.Value)
+            {
+                sb.Append("\r\n").Append("<color=#4c178c>Streamer Mode Enabled</color>").Append("\r\n").Append($"Follow {Utils.GradientColorText("d700f8", "4c178c", "arcade_nairo")} on <color=#4c178c>Twitch</color>");
+            }
+
             var ping = AmongUsClient.Instance.Ping;
             string pingcolor = "#ff4500";
             if (ping < 30) pingcolor = "#44dfcc";
@@ -69,25 +74,16 @@ public static class Credentials
         static TextMeshPro SpecialEventText;
         private static void Postfix(VersionShower __instance)
         {
-            Main.credentialsText = $"\r\n<color={Main.ModColor}>{Main.ModName}</color> v{Main.PluginDisplayVersion}";
+            Main.credentialsText = $"\r\n<color={Main.ModColor}>{Main.ModName}</color> v{Main.PluginDisplayVersion} <color=#1badec>(Edited v{Main.PluginEditVersion})</color>";
 
-#if RELEASE
             //  Main.credentialsText += $"\r\n<color=#a54aff>Modified by </color><color=#ff3b6f>Moe</color>";
             Main.credentialsText += $"\r\n<color=#a54aff>By <color=#ffc0cb>KARPED1EM</color> & </color><color=#f34c50>Moe</color>";
-#endif
 
-#if DEBUG
-         /* string additionalCredentials = GetString("TextBelowVersionText");
-            if (additionalCredentials != null && additionalCredentials != "*TextBelowVersionText")
-            {
-                Main.credentialsText += $"\n{additionalCredentials}";
-            } */
-
-            Main.credentialsText += $"\r\n<color=#a54aff>By <color=#ffc0cb>KARPED1EM</color> & </color><color=#f34c50>Moe</color>";
-#endif
 
             if (Main.IsAprilFools)
                 Main.credentialsText = $"\r\n<color=#00bfff>Town Of Host</color> v11.45.14";
+
+            Main.credentialsText += $"\r\nEdited By {Utils.GradientColorText("1badec", "193ac9", "Furo")} for {Utils.GradientColorText("d700f8", "4c178c", "arcade_nairo")}";
 
             var credentials = Object.Instantiate(__instance.text);
             credentials.text = Main.credentialsText;

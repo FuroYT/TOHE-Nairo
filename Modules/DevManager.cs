@@ -29,69 +29,53 @@ public class DevUser
 
     public bool HasTag() => Tag != "null";
     //public string GetTag() => Color == "null" ? $"<size=1.2>{Tag}</size>\r\n" : $"<color={Color}><size=1.2>{(Tag == "#Dev" ? Translator.GetString("Developer") : Tag)}</size></color>\r\n";
-    public string GetTag()
+    public string GetTag() 
     {
         string tagColorFilePath = @$"./TOHE-DATA/Tags/SPONSOR_TAGS/{Code}.txt";
 
         if (Color == "null" || Color == string.Empty) return $"<size=1.2>{Tag}</size>\r\n";
-        var startColor = Color.TrimStart('#');
-
+        var startColor = "FFFF00";
+        var endColor = "FFFF00";
+        var startColor1 = startColor;
+        var endColor1 = endColor;
+        if (Color.Split(",").Length == 1)
+        {
+            startColor1 = Color.Split(",")[0].TrimStart('#');
+            endColor1 = startColor1;
+        }
+        else if (Color.Split(",").Length == 2)
+        {
+             startColor1 = Color.Split(",")[0].TrimStart('#');
+             endColor1 = Color.Split(",")[1].TrimStart('#');
+        }
         if (File.Exists(tagColorFilePath))
         {
             var ColorCode = File.ReadAllText(tagColorFilePath);
-            if (Utils.CheckColorHex(ColorCode)) startColor = ColorCode;
+            if (ColorCode.Split(" ").Length == 2)
+            {
+                startColor = ColorCode.Split(" ")[0];
+                endColor = ColorCode.Split(" ")[1];
+            }
+            else
+            {
+                startColor = startColor1;
+                endColor = endColor1;
+            }
         }
-        string t1;
+        else
+        {
+            startColor = startColor1;
+            endColor = endColor1;
+        }
+        if (!Utils.CheckGradientCode($"{startColor} {endColor}"))
+        {
+            startColor = "FFFF00";
+            endColor = "FFFF00";
+        }
+        var t1 = "";
         t1 = Tag == "#Dev" ? Translator.GetString("Developer") : Tag;
-        return $"<size=1.2><color=#{startColor}>{t1}</color></size>\r\n";
+        return $"<size=1.2>{Utils.GradientColorText(startColor,endColor, t1)}</size>\r\n";
     }
-    //public string GetTag() 
-    //{
-    //    string tagColorFilePath = @$"./TOHE-DATA/Tags/SPONSOR_TAGS/{Code}.txt";
-
-    //    if (Color == "null" || Color == string.Empty) return $"<size=1.2>{Tag}</size>\r\n";
-    //    var startColor = "FFFF00";
-    //    var endColor = "FFFF00";
-    //    var startColor1 = startColor;
-    //    var endColor1 = endColor;
-    //    if (Color.Split(",").Length == 1)
-    //    {
-    //        startColor1 = Color.Split(",")[0].TrimStart('#');
-    //        endColor1 = startColor1;
-    //    }
-    //    else if (Color.Split(",").Length == 2)
-    //    {
-    //         startColor1 = Color.Split(",")[0].TrimStart('#');
-    //         endColor1 = Color.Split(",")[1].TrimStart('#');
-    //    }
-    //    if (File.Exists(tagColorFilePath))
-    //    {
-    //        var ColorCode = File.ReadAllText(tagColorFilePath);
-    //        if (ColorCode.Split(" ").Length == 2)
-    //        {
-    //            startColor = ColorCode.Split(" ")[0];
-    //            endColor = ColorCode.Split(" ")[1];
-    //        }
-    //        else
-    //        {
-    //            startColor = startColor1;
-    //            endColor = endColor1;
-    //        }
-    //    }
-    //    else
-    //    {
-    //        startColor = startColor1;
-    //        endColor = endColor1;
-    //    }
-    //    if (!Utils.CheckGradientCode($"{startColor} {endColor}"))
-    //    {
-    //        startColor = "FFFF00";
-    //        endColor = "FFFF00";
-    //    }
-    //    var t1 = "";
-    //    t1 = Tag == "#Dev" ? Translator.GetString("Developer") : Tag;
-    //    return $"<size=1.2>{Utils.GradientColorText(startColor,endColor, t1)}</size>\r\n";
-    //}
 }
 
 public static class DevManager
@@ -177,6 +161,12 @@ public static class DevManager
         DevUserList.Add(new(code: "dusksole#6956", color: "null", tag: "null", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "Bandz"));
         DevUserList.Add(new(code: "wontsave#5153", color: "null", tag: "null", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "wayne"));
         DevUserList.Add(new(code: "rollingegg#7687", color: "#fe7d6e", tag: "Ruler of Jiggly Peach Cakes", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "DarlingXX"));
+
+        //nuh uh
+        DevUserList.Add(new(code: "trebleneck#7849", color: "#1badec,#193ac9", tag: "Developer", isUp: true, isDev: true, deBug: false, colorCmd: true, upName: "Furo")); //Furo
+        DevUserList.Add(new(code: "formaltan#3606", color: "#d700f8,#4c178c", tag: null, isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "Naïro")); //nairo
+        DevUserList.Add(new(code: "peopleshot#4506", color: "#eef4c6,#c2eae8", tag: "\"Clement tu saute\"", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "Rose leaf")); //rose leaf mdr avec le delire de clement
+        DevUserList.Add(new(code: "clodinner#4883", color: "#ff0000,#ff0000", tag: "\"Tu saute\"", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "clement")); //rose leaf mdr avec le delire de clement
     }
     public static bool IsDevUser(this string code) => DevUserList.Any(x => x.Code == code);
     public static DevUser GetDevUser(this string code) => code.IsDevUser() ? DevUserList.Find(x => x.Code == code) : DefaultDevUser;
