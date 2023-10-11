@@ -37,14 +37,16 @@ public static class AntiBlackout
         || NWitch.IsEnable || Maverick.IsEnable
         || Shade.IsEnable || RuthlessRomantic.IsEnable
         || Spiritcaller.IsEnable || Occultist.IsEnable
+        || Pyromaniac.IsEnable || Huntsman.IsEnable
         || PlagueBearer.IsEnable || CustomRoles.Pestilence.RoleExist(true)
-        || CustomRoles.Sidekick.RoleExist(true) || (CustomRoles.Arsonist.RoleExist(true) && Options.ArsonistKeepsGameGoing.GetBool())
+        || CustomRoles.Sidekick.RoleExist(true) || (CustomRoles.Arsonist.RoleExist(true) && Options.ArsonistCanIgniteAnytime.GetBool())
         // Covens
         || Banshee.IsEnable || CovenLeader.IsEnable
         || HexMaster.IsEnable || Jinx.IsEnable
         || Medusa.IsEnable || Poisoner.IsEnable
         || PotionMaster.IsEnable || Wraith.IsEnable
-        || Necromancer.IsEnable;
+        || Necromancer.IsEnable
+        || Bandit.IsEnable || Doppelganger.IsEnable;
     ///<summary>
     ///Difference between the number of non-impostors and the number of imposters
     ///</summary>
@@ -74,8 +76,9 @@ public static class AntiBlackout
 
             foreach (var pc in Main.AllPlayerControls)
             {
-                if ((pc.GetCustomRole().IsNK() && !pc.Is(CustomRoles.Arsonist)) || pc.GetCustomRole().IsCoven()) numNeutrals++;
-                else if (pc.Is(CustomRoles.Arsonist) && Options.ArsonistKeepsGameGoing.GetBool()) numNeutrals++;
+                if ((pc.GetCustomRole().IsNK() && !pc.Is(CustomRoles.Arsonist))) numNeutrals++;
+                else if (pc.Is(CustomRoles.Arsonist) && Options.ArsonistCanIgniteAnytime.GetBool()) numNeutrals++;
+                else if (pc.Is(CustomRoles.Succubus)) numNeutrals++;
             }
 
             Logger.Info($" {numNeutrals}", "AntiBlackout Num Neutrals");
@@ -184,5 +187,10 @@ public static class AntiBlackout
         if (isDeadCache == null) isDeadCache = new();
         isDeadCache.Clear();
         IsCached = false;
+        ShowExiledInfo = false;
+        StoreExiledMessage = "";
     }
+
+    public static bool ShowExiledInfo = false;
+    public static string StoreExiledMessage = "";
 }

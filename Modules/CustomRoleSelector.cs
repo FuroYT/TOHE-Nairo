@@ -2,7 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TOHE.Roles.Crewmate;
+using TOHE.Roles.Double;
+using TOHE.Roles.Impostor;
 using TOHE.Roles.Neutral;
+using static TOHE.Translator;
 
 namespace TOHE.Modules;
 
@@ -45,7 +49,9 @@ internal class CustomRoleSelector
         List<CustomRoles> roleOnList = new();
 
         List<CustomRoles> ImpOnList = new();
+        List<CustomRoles> MiniOnList = new();
         List<CustomRoles> ImpRateList = new();
+        List<CustomRoles> MiniRateList = new();
 
         List<CustomRoles> NonNeutralKillingOnList = new();
         List<CustomRoles> NonNeutralKillingRateList = new();
@@ -71,19 +77,50 @@ internal class CustomRoleSelector
         foreach (var role in roleList) if (role.GetMode() == 2)
         {
             if (role.IsImpostor()) ImpOnList.Add(role);
+            else if (role.IsMini()) MiniOnList.Add(role);
             else if (role.IsNonNK()) NonNeutralKillingOnList.Add(role);
             else if (role.IsNK()) NeutralKillingOnList.Add(role);
-            else if (role.IsCoven()) CovenOnList.Add(role);
+        //    else if (role.IsCoven()) CovenOnList.Add(role);
             else roleOnList.Add(role);
         }
         // 职业设置为：启用
         foreach (var role in roleList) if (role.GetMode() == 1)
         {
             if (role.IsImpostor()) ImpRateList.Add(role);
+            else if (role.IsMini()) MiniRateList.Add(role);
             else if (role.IsNonNK()) NonNeutralKillingRateList.Add(role);
             else if (role.IsNK()) NeutralKillingRateList.Add(role);
-            else if (role.IsCoven()) CovenRateList.Add(role);
+        //    else if (role.IsCoven()) CovenRateList.Add(role);
             else roleRateList.Add(role);
+        }
+
+        while (MiniOnList.Count == 1)
+        {
+            var select = MiniOnList[rd.Next(0, MiniOnList.Count)];
+            MiniOnList.Remove(select);
+            Mini.SetMiniTeam(Mini.EvilMiniSpawnChances.GetFloat());
+            if (!Mini.IsEvilMini)
+            {
+                roleOnList.Add(CustomRoles.NiceMini);
+            }
+            if (Mini.IsEvilMini)
+            {
+                ImpOnList.Add(CustomRoles.EvilMini);
+            }
+        }
+        while (MiniRateList.Count ==1)
+        {
+            var select = MiniRateList[rd.Next(0, MiniRateList.Count)];
+            MiniRateList.Remove(select);
+            Mini.SetMiniTeam(Mini.EvilMiniSpawnChances.GetFloat());
+            if (!Mini.IsEvilMini)
+            {
+                roleRateList.Add(CustomRoles.NiceMini);
+            }
+            if (Mini.IsEvilMini)
+            {
+                ImpRateList.Add(CustomRoles.EvilMini);
+            }
         }
 
         // 抽取优先职业（内鬼）
@@ -93,7 +130,7 @@ internal class CustomRoleSelector
             ImpOnList.Remove(select);
             rolesToAssign.Add(select);
             readyRoleNum++;
-            Logger.Info(select.ToString() + " 加入内鬼职业待选列表（优先）", "CustomRoleSelector");
+            Logger.Info(select.ToString() + " Add to Impostor waiting list (priority)", "CustomRoleSelector");
             if (readyRoleNum >= playerCount) goto EndOfAssign;
             if (readyRoleNum >= optImpNum) break;
         }
@@ -106,7 +143,7 @@ internal class CustomRoleSelector
                 ImpRateList.Remove(select);
                 rolesToAssign.Add(select);
                 readyRoleNum++;
-                Logger.Info(select.ToString() + " 加入内鬼职业待选列表", "CustomRoleSelector");
+                Logger.Info(select.ToString() + " Add to Impostor waiting list", "CustomRoleSelector");
                 if (readyRoleNum >= playerCount) goto EndOfAssign;
                 if (readyRoleNum >= optImpNum) break;
             }
@@ -120,7 +157,7 @@ internal class CustomRoleSelector
             rolesToAssign.Add(select);
             readyRoleNum++;
             readyNonNeutralKillingNum += select.GetCount();
-            Logger.Info(select.ToString() + " 加入中立职业待选列表（优先）", "CustomRoleSelector");
+            Logger.Info(select.ToString() + " Add to Non NeutralKilling waiting list (priority)", "CustomRoleSelector");
             if (readyRoleNum >= playerCount) goto EndOfAssign;
             if (readyNonNeutralKillingNum >= optNonNeutralKillingNum) break;
         }
@@ -135,7 +172,7 @@ internal class CustomRoleSelector
                 rolesToAssign.Add(select);
                 readyRoleNum++;
                 readyNonNeutralKillingNum += select.GetCount();
-                Logger.Info(select.ToString() + " 加入中立职业待选列表", "CustomRoleSelector");
+                Logger.Info(select.ToString() + "Add to Non Neutral Killing waiting list", "CustomRoleSelector");
                 if (readyRoleNum >= playerCount) goto EndOfAssign;
                 if (readyNonNeutralKillingNum >= optNonNeutralKillingNum) break;
             }
@@ -149,7 +186,7 @@ internal class CustomRoleSelector
             rolesToAssign.Add(select);
             readyRoleNum++;
             readyNeutralKillingNum += select.GetCount();
-            Logger.Info(select.ToString() + " 加入中立职业待选列表（优先）", "CustomRoleSelector");
+            Logger.Info(select.ToString() + " Add to NeutralKilling waiting list (priority)", "CustomRoleSelector");
             if (readyRoleNum >= playerCount) goto EndOfAssign;
             if (readyNeutralKillingNum >= optNeutralKillingNum) break;
         }
@@ -164,7 +201,7 @@ internal class CustomRoleSelector
                 rolesToAssign.Add(select);
                 readyRoleNum++;
                 readyNeutralKillingNum += select.GetCount();
-                Logger.Info(select.ToString() + " 加入中立职业待选列表", "CustomRoleSelector");
+                Logger.Info(select.ToString() + " Add to NeutralKilling waiting list", "CustomRoleSelector");
                 if (readyRoleNum >= playerCount) goto EndOfAssign;
                 if (readyNeutralKillingNum >= optNeutralKillingNum) break;
             }
@@ -178,7 +215,7 @@ internal class CustomRoleSelector
             rolesToAssign.Add(select);
             readyRoleNum++;
             readyCovenNum += select.GetCount();
-            Logger.Info(select.ToString() + " 加入中立职业待选列表（优先）", "CustomRoleSelector");
+            Logger.Info(select.ToString() + " Add to Coven waiting list (priority)", "CustomRoleSelector");
             if (readyRoleNum >= playerCount) goto EndOfAssign;
             if (readyCovenNum >= optCovenNum) break;
         }
@@ -193,7 +230,7 @@ internal class CustomRoleSelector
                 rolesToAssign.Add(select);
                 readyRoleNum++;
                 readyCovenNum += select.GetCount();
-                Logger.Info(select.ToString() + " 加入中立职业待选列表", "CustomRoleSelector");
+                Logger.Info(select.ToString() + " Add to Coven waiting list", "CustomRoleSelector");
                 if (readyRoleNum >= playerCount) goto EndOfAssign;
                 if (readyCovenNum >= optCovenNum) break;
             }
@@ -206,7 +243,7 @@ internal class CustomRoleSelector
             roleOnList.Remove(select);
             rolesToAssign.Add(select);
             readyRoleNum++;
-            Logger.Info(select.ToString() + " 加入船员职业待选列表（优先）", "CustomRoleSelector");
+            Logger.Info(select.ToString() + " Add to Crewmate waiting list (preferred)", "CustomRoleSelector");
             if (readyRoleNum >= playerCount) goto EndOfAssign;
         }
         // 优先职业不足以分配，开始分配启用的职业
@@ -218,7 +255,7 @@ internal class CustomRoleSelector
                 roleRateList.Remove(select);
                 rolesToAssign.Add(select);
                 readyRoleNum++;
-                Logger.Info(select.ToString() + " 加入船员职业待选列表", "CustomRoleSelector");
+                Logger.Info(select.ToString() + " Add to Crewmate waiting list", "CustomRoleSelector");
                 if (readyRoleNum >= playerCount) goto EndOfAssign;
             }
         }
@@ -234,6 +271,9 @@ internal class CustomRoleSelector
             if (rd.Next(0, 100) < Sans.BardChance.GetInt() && rolesToAssign.Remove(CustomRoles.Sans)) rolesToAssign.Add(CustomRoles.Bard);
         }
         {
+            if (rd.Next(0, 100) < Vampire.VampiressChance.GetInt() && rolesToAssign.Remove(CustomRoles.Vampire)) rolesToAssign.Add(CustomRoles.Vampiress);
+        }
+        {
             if (rd.Next(0, 100) < Options.NukerChance.GetInt() && rolesToAssign.Remove(CustomRoles.Bomber)) rolesToAssign.Add(CustomRoles.Nuker);
         }
         if (NSerialKiller.HasSerialKillerBuddy.GetBool() && rolesToAssign.Contains(CustomRoles.NSerialKiller))
@@ -242,12 +282,55 @@ internal class CustomRoleSelector
          //   if (rd.Next(0, 100) < NSerialKiller.ChanceToSpawnAnother.GetInt()) rolesToAssign.Add(CustomRoles.NSerialKiller);
         }
 
+        if (CustomRoles.Autopsy.IsEnable() && CustomRoles.Doctor.IsEnable() || 
+        CustomRoles.Lucky.IsEnable() && CustomRoles.Luckey.IsEnable() ||
+        CustomRoles.Sleuth.IsEnable() && CustomRoles.Detective.IsEnable() ||
+        CustomRoles.Cyber.IsEnable() && CustomRoles.SuperStar.IsEnable() ||
+        CustomRoles.Cyber.IsEnable() && CustomRoles.CyberStar.IsEnable() ||
+        CustomRoles.Repairman.IsEnable() && CustomRoles.SabotageMaster.IsEnable() ||
+        CustomRoles.Lazy.IsEnable() && CustomRoles.Needy.IsEnable())
+        {
+            _ = new LateTask(() =>
+                {
+                    Logger.SendInGame(GetString("IncompatibleRoleSet"));
+                }, 3f, "Incompatible Role Set Info");
+
+        }
+
+        if (Options.NeutralKillingRolesMaxPlayer.GetInt() > 1 && !Options.TemporaryAntiBlackoutFix.GetBool())
+        {
+            _ = new LateTask(() =>
+                {
+                    Logger.SendInGame(GetString("NeutralKillingBlackoutWarning"));
+                }, 4f, "Neutral Killing Blackout Warning");
+
+        }
+
         if (CustomRoles.Autopsy.IsEnable())
         {
                 if (rolesToAssign.Contains(CustomRoles.Doctor))
                     {
                         rolesToAssign.Remove(CustomRoles.Doctor);
                         rolesToAssign.Add(CustomRoles.ScientistTOHE);
+                        Logger.Warn($"Doctor -> Scientist", "Incompatible Role Set");
+                    }
+        }
+        if (CustomRoles.Cyber.IsEnable())
+        {
+                if (rolesToAssign.Contains(CustomRoles.SuperStar))
+                    {
+                        rolesToAssign.Remove(CustomRoles.SuperStar);
+                        rolesToAssign.Add(CustomRoles.CrewmateTOHE);
+                        Logger.Warn($"Super Star -> Crewmate", "Incompatible Role Set");
+                    }
+        }
+        if (CustomRoles.Cyber.IsEnable())
+        {
+                if (rolesToAssign.Contains(CustomRoles.CyberStar))
+                    {
+                        rolesToAssign.Remove(CustomRoles.CyberStar);
+                        rolesToAssign.Add(CustomRoles.CrewmateTOHE);
+                        Logger.Warn($"Celebrity -> Crewmate", "Incompatible Role Set");
                     }
         }
         if (CustomRoles.Lazy.IsEnable())
@@ -256,14 +339,17 @@ internal class CustomRoleSelector
                     {
                         rolesToAssign.Remove(CustomRoles.Needy);
                         rolesToAssign.Add(CustomRoles.CrewmateTOHE);
+                        Logger.Warn($"Lazy Guy -> Crewmate", "Incompatible Role Set");
                     }
         }
+
         if (CustomRoles.Lucky.IsEnable())
         {
                 if (rolesToAssign.Contains(CustomRoles.Luckey))
                     {
                         rolesToAssign.Remove(CustomRoles.Luckey);
                         rolesToAssign.Add(CustomRoles.CrewmateTOHE);
+                        Logger.Warn($"Luckey -> Crewmate", "Incompatible Role Set");
                     }
         }
         if (CustomRoles.Sleuth.IsEnable())
@@ -272,6 +358,7 @@ internal class CustomRoleSelector
                     {
                         rolesToAssign.Remove(CustomRoles.Detective);
                         rolesToAssign.Add(CustomRoles.CrewmateTOHE);
+                        Logger.Warn($"Detective -> Crewmate", "Incompatible Role Set");
                     }
         }
         if (CustomRoles.Repairman.IsEnable())
@@ -280,8 +367,18 @@ internal class CustomRoleSelector
                     {
                         rolesToAssign.Remove(CustomRoles.SabotageMaster);
                         rolesToAssign.Add(CustomRoles.EngineerTOHE);
+                        Logger.Warn($"Mechanic -> Engineer", "Incompatible Role Set");
                     }
         }
+    /*    if (CustomRoles.Tricky.IsEnable())
+        {
+                if (rolesToAssign.Contains(CustomRoles.Trickster))
+                    {
+                        rolesToAssign.Remove(CustomRoles.Trickster);
+                        rolesToAssign.Add(CustomRoles.ImpostorTOHE);
+                        Logger.Warn($"Trickster -> Impostor", "Incompatible Role Set");
+                    }
+        } */
 
         if (Romantic.IsEnable)
         {
@@ -320,7 +417,7 @@ internal class CustomRoleSelector
             {
                 rolesToAssign.Remove(dr.Value);
                 rolesToAssign.Insert(0, dr.Value);
-                Logger.Info("职业列表提高优先：" + dr.Value, "Dev Role");
+                Logger.Info("Role list improved priority：" + dr.Value, "Dev Role");
                 continue;
             }
             for (int i = 0; i < rolesToAssign.Count; i++)
@@ -328,16 +425,17 @@ internal class CustomRoleSelector
                 var role = rolesToAssign[i];
                 if (dr.Value.GetMode() != role.GetMode()) continue;
                 if (
+                    (dr.Value.IsMini() && role.IsMini()) ||
                     (dr.Value.IsImpostor() && role.IsImpostor()) ||
                     (dr.Value.IsNonNK() && role.IsNonNK()) ||
                     (dr.Value.IsNK() && role.IsNK()) ||
-                    (dr.Value.IsCoven() && role.IsCoven()) ||
+                //    (dr.Value.IsCoven() && role.IsCoven()) ||
                     (dr.Value.IsCrewmate() & role.IsCrewmate())
                     )
                 {
                     rolesToAssign.RemoveAt(i);
                     rolesToAssign.Insert(0, dr.Value);
-                    Logger.Info("覆盖职业列表：" + i + " " + role.ToString() + " => " + dr.Value, "Dev Role");
+                    Logger.Info("Coverage role list：" + i + " " + role.ToString() + " => " + dr.Value, "Dev Role");
                     break;
                 }
             }
@@ -355,7 +453,7 @@ internal class CustomRoleSelector
                     var id = rolesToAssign.IndexOf(dr.Value);
                     if (id == -1) continue;
                     RoleResult.Add(pc, rolesToAssign[id]);
-                    Logger.Info($"职业优先分配：{AllPlayer[0].GetRealName()} => {rolesToAssign[id]}", "CustomRoleSelector");
+                    Logger.Info($"Role Priority Assignment：{AllPlayer[0].GetRealName()} => {rolesToAssign[id]}", "CustomRoleSelector");
                     delPc = pc;
                     rolesToAssign.RemoveAt(id);
                     goto EndOfWhile;
@@ -363,11 +461,12 @@ internal class CustomRoleSelector
 
             var roleId = rd.Next(0, rolesToAssign.Count);
             RoleResult.Add(AllPlayer[0], rolesToAssign[roleId]);
-            Logger.Info($"职业分配：{AllPlayer[0].GetRealName()} => {rolesToAssign[roleId]}", "CustomRoleSelector");
+            Logger.Info($"Role grouping：{AllPlayer[0].GetRealName()} => {rolesToAssign[roleId]}", "CustomRoleSelector");
             AllPlayer.RemoveAt(0);
             rolesToAssign.RemoveAt(roleId);
 
         EndOfWhile:;
+
             if (delPc != null)
             {
                 AllPlayer.Remove(delPc);
@@ -376,9 +475,9 @@ internal class CustomRoleSelector
         }
 
         if (AllPlayer.Any())
-            Logger.Error("职业分配错误：存在未被分配职业的玩家", "CustomRoleSelector");
+            Logger.Error("Role assignment error: There are players who have not been assigned role", "CustomRoleSelector");
         if (rolesToAssign.Any())
-            Logger.Error("职业分配错误：存在未被分配的职业", "CustomRoleSelector");
+            Logger.Error("Role assignment error: There is an unassigned role", "CustomRoleSelector");
 
     }
 

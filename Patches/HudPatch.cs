@@ -2,6 +2,7 @@ using HarmonyLib;
 using Il2CppSystem.Text;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using TOHE.Roles.Crewmate;
 using TOHE.Roles.Impostor;
 using TOHE.Roles.Neutral;
@@ -21,6 +22,7 @@ class HudManagerPatch
     public static int NowFrameCount = 0;
     public static float FrameRateTimer = 0.0f;
     public static TMPro.TextMeshPro LowerInfoText;
+    public static GameObject TempLowerInfoText;
     public static void Postfix(HudManager __instance)
     {
         if (!GameStates.IsModHost) return;
@@ -130,6 +132,7 @@ class HudManagerPatch
                         Occultist.GetAbilityButtonText(__instance);
                         break;
                     case CustomRoles.Vampire:
+                    case CustomRoles.Vampiress:
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
                         Vampire.SetKillButtonText();
                         break;
@@ -153,7 +156,7 @@ class HudManagerPatch
                         break;
                     case CustomRoles.Puppeteer:
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
-                        Puppeteer.SetKillButtonText(__instance);
+                        __instance.KillButton.OverrideText(GetString("KillButtonText"));
                         break;
                     case CustomRoles.CovenLeader:
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
@@ -201,6 +204,7 @@ class HudManagerPatch
                         break;
                     case CustomRoles.NSerialKiller:
                     case CustomRoles.Juggernaut:
+                    case CustomRoles.Pyromaniac:
                     case CustomRoles.Jackal:
                     case CustomRoles.Virus:
                     case CustomRoles.BloodKnight:
@@ -208,8 +212,10 @@ class HudManagerPatch
                     case CustomRoles.SwordsMan:
                     case CustomRoles.Parasite:
                     case CustomRoles.Refugee:
+                    case CustomRoles.Huntsman:
                     case CustomRoles.Traitor:
                     case CustomRoles.PotionMaster:
+                    case CustomRoles.Werewolf:
                     case CustomRoles.Spiritcaller:
                     case CustomRoles.Ritualist:
                     case CustomRoles.Necromancer:
@@ -219,8 +225,8 @@ class HudManagerPatch
                         __instance.KillButton.OverrideText(GetString("KillButtonText"));
                         break;
                     case CustomRoles.Glitch:
-                        __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
-                        __instance.SabotageButton.OverrideText(GetString("HackButtonText"));
+                        __instance.KillButton.OverrideText(GetString("KillButtonText"));
+                        __instance.SabotageButton.OverrideText(GetString("MimicButtonText"));
                         break;
                     case CustomRoles.FFF:
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
@@ -305,6 +311,10 @@ class HudManagerPatch
                         __instance.AbilityButton.OverrideText(GetString(Chameleon.IsInvis(PlayerControl.LocalPlayer.PlayerId) ? "ChameleonRevertDisguise" : "ChameleonDisguise"));
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
                         break;
+                    case CustomRoles.Alchemist:
+                        __instance.AbilityButton.OverrideText(GetString("AlchemistVentButtonText"));
+                        __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
+                        break;
                     case CustomRoles.Mario:
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
                         __instance.AbilityButton.buttonLabelText.text = GetString("VectorVentButtonText");
@@ -313,6 +323,10 @@ class HudManagerPatch
                     case CustomRoles.Veteran:
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
                         __instance.AbilityButton.buttonLabelText.text = GetString("VeteranVentButtonText");
+                        break;
+                    case CustomRoles.Bastion:
+                        __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
+                        __instance.AbilityButton.buttonLabelText.text = GetString("BastionVentButtonText");
                         break;
                     case CustomRoles.TimeMaster:
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
@@ -350,6 +364,11 @@ class HudManagerPatch
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
                         __instance.KillButton.OverrideText(GetString("JailorKillButtonText"));
                         break;
+                    case CustomRoles.Undertaker:
+                        __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
+                        __instance.KillButton.OverrideText(GetString("KillButtonText"));
+                        __instance.AbilityButton.OverrideText(GetString("UndertakerButtonText"));
+                        break;
                     case CustomRoles.Agitater:
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
                         __instance.KillButton.OverrideText(GetString("AgitaterKillButtonText"));
@@ -381,6 +400,10 @@ class HudManagerPatch
                         __instance.KillButton.OverrideText(GetString("InfectiousKillButtonText"));
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
                         break;
+                    case CustomRoles.Imitator:
+                        __instance.KillButton.OverrideText(GetString("ImitatorKillButtonText"));
+                        __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
+                        break;
                     case CustomRoles.Monarch:
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
                         __instance.KillButton.OverrideText(GetString("MonarchKillButtonText"));
@@ -388,6 +411,10 @@ class HudManagerPatch
                     case CustomRoles.Deputy:
                         __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
                         __instance.KillButton.OverrideText(GetString("DeputyHandcuffText"));
+                        break;
+                    case CustomRoles.Investigator:
+                        __instance.ReportButton.OverrideText(GetString("ReportButtonText"));
+                        __instance.KillButton.OverrideText(GetString("InvestigatorButtonText"));
                         break;
                     case CustomRoles.Sidekick:
                         __instance.KillButton.OverrideText(GetString("KillButtonText"));
@@ -425,15 +452,20 @@ class HudManagerPatch
                 //バウンティハンターのターゲットテキスト
                 if (LowerInfoText == null)
                 {
-                    LowerInfoText = Object.Instantiate(__instance.KillButton.buttonLabelText);
+                    TempLowerInfoText = new GameObject("CountdownText");
+                    TempLowerInfoText.transform.position = new Vector3(0f, -2f, 1f);
+                    LowerInfoText = TempLowerInfoText.AddComponent<TextMeshPro>();
+                    //LowerInfoText.text = string.Format(GetString("CountdownText"));
+                    LowerInfoText.alignment = TextAlignmentOptions.Center;
+                    //LowerInfoText = Object.Instantiate(__instance.KillButton.buttonLabelText);
                     LowerInfoText.transform.parent = __instance.transform;
                     LowerInfoText.transform.localPosition = new Vector3(0, -2f, 0);
-                    LowerInfoText.alignment = TMPro.TextAlignmentOptions.Center;
-                    LowerInfoText.overflowMode = TMPro.TextOverflowModes.Overflow;
+                    LowerInfoText.overflowMode = TextOverflowModes.Overflow;
                     LowerInfoText.enableWordWrapping = false;
-                    LowerInfoText.color = Palette.EnabledColor;
-                    LowerInfoText.fontSizeMin = 2.0f;
-                    LowerInfoText.fontSizeMax = 2.0f;
+                    LowerInfoText.color = Color.white;
+                    LowerInfoText.outlineColor = Color.black;
+                    LowerInfoText.outlineWidth = 20000000f;
+                    LowerInfoText.fontSize = 2f;
                 }
 
                 if (player.Is(CustomRoles.BountyHunter))
@@ -461,6 +493,14 @@ class HudManagerPatch
                 {
                     LowerInfoText.text = Swooper.GetHudText(player);
                 }
+                else if (player.Is(CustomRoles.Alchemist))
+                {
+                    LowerInfoText.text = Alchemist.GetHudText(player);
+                }
+                else if (player.Is(CustomRoles.Huntsman))
+                {
+                    LowerInfoText.text = Huntsman.GetHudText(player);
+                }
                 else if (player.Is(CustomRoles.Wraith))
                 {
                     LowerInfoText.text = Wraith.GetHudText(player);
@@ -472,6 +512,10 @@ class HudManagerPatch
                 else if (player.Is(CustomRoles.Chameleon))
                 {
                     LowerInfoText.text = Chameleon.GetHudText(player);
+                }
+                else if (player.Is(CustomRoles.Glitch))
+                {
+                    LowerInfoText.text = Glitch.GetHudText(player);
                 }
                 else if (player.Is(CustomRoles.BloodKnight))
                 {
@@ -607,6 +651,7 @@ class SetHudActivePatch
             case CustomRoles.Arsonist:
             case CustomRoles.SwordsMan:
             case CustomRoles.Deputy:
+            case CustomRoles.Investigator:
             case CustomRoles.Monarch:
             case CustomRoles.NWitch:
             case CustomRoles.CovenLeader:
@@ -693,7 +738,15 @@ class MapBehaviourShowPatch
         if (opts.Mode is MapOptions.Modes.Normal or MapOptions.Modes.Sabotage)
         {
             var player = PlayerControl.LocalPlayer;
-            if (player.Is(CustomRoleTypes.Impostor) || (player.Is(CustomRoles.Parasite)) || (player.Is(CustomRoles.PotionMaster)) || (player.Is(CustomRoles.Glitch)) || (player.Is(CustomRoles.Refugee)) || (player.Is(CustomRoles.Jackal) && Jackal.CanUseSabotage.GetBool()) || (player.Is(CustomRoles.Traitor) && Traitor.CanUseSabotage.GetBool()))
+
+            if (player.Is(CustomRoleTypes.Impostor)
+            || player.Is(CustomRoles.Parasite)
+            || player.Is(CustomRoles.Refugee)
+            || player.Is(CustomRoles.Glitch)
+            || (player.Is(CustomRoles.Bandit) && Bandit.CanUseSabotage.GetBool())
+            || (player.Is(CustomRoles.Jackal) && Jackal.CanUseSabotage.GetBool())
+            || (player.Is(CustomRoles.Sidekick) && Jackal.CanUseSabotageSK.GetBool())
+            || (player.Is(CustomRoles.Traitor) && Traitor.CanUseSabotage.GetBool()))
                 opts.Mode = MapOptions.Modes.Sabotage;
             else
                 opts.Mode = MapOptions.Modes.Normal;
@@ -732,13 +785,15 @@ class TaskPanelBehaviourPatch
                         if ((line.StartsWith("<color=#FF1919FF>") || line.StartsWith("<color=#FF0000FF>")) && sb.Length < 1 && !line.Contains('(')) continue;
                         sb.Append(line + "\r\n");
                     }
+                    
                     if (sb.Length > 1)
                     {
                         var text = sb.ToString().TrimEnd('\n').TrimEnd('\r');
-                        if (!Utils.HasTasks(player.Data, false) && sb.ToString().Count(s => s == '\n') >= 2)
-                            text = $"{ Utils.ColorString(Utils.GetRoleColor(player.GetCustomRole()).ShadeColor(0.2f), GetString("FakeTask"))}\r\n{text}";
+                        if (!Utils.HasTasks(player.Data, false) && sb.ToString().Count(s => (s == '\n')) >= 2)
+                            text = $"{Utils.ColorString(Utils.GetRoleColor(player.GetCustomRole()).ShadeColor(0.2f), GetString("FakeTask"))}\r\n{text}";
                         AllText += $"\r\n\r\n<size=85%>{text}</size>";
                     }
+
                     if (MeetingStates.FirstMeeting)
                     {
                         AllText += $"\r\n\r\n</color><size=70%>{GetString("PressF1ShowMainRoleDes")}";

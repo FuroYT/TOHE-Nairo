@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using TOHE.Modules;
 using TOHE.Roles.Crewmate;
+using TOHE.Roles.Double;
 using UnityEngine;
 using static TOHE.Translator;
 
@@ -39,7 +40,7 @@ public static class RetributionistRevengeManager
         }
         if (Options.CanOnlyRetributeWithTasksDone.GetBool())
         {
-            if (!pc.GetPlayerTaskState().IsTaskFinished && pc.Data.IsDead && !CopyCat.playerIdList.Contains(pc.PlayerId))
+            if (!pc.GetPlayerTaskState().IsTaskFinished && pc.Data.IsDead && !CopyCat.playerIdList.Contains(pc.PlayerId) && !Main.TasklessCrewmate.Contains(pc.PlayerId))
             {
                 if (!isUI) Utils.SendMessage(GetString("RetributionistKillDisable"), pc.PlayerId);
                 else pc.ShowPopUp(GetString("RetributionistKillDisable"));
@@ -99,6 +100,12 @@ public static class RetributionistRevengeManager
         {
             if (!isUI) Utils.SendMessage(GetString("PestilenceImmune"), pc.PlayerId);
             else pc.ShowPopUp(GetString("PestilenceImmune"));
+            return true;
+        }
+        if ((target.Is(CustomRoles.NiceMini) || target.Is(CustomRoles.EvilMini)) && Mini.Age < 18)
+        {
+            if (!isUI) Utils.SendMessage(GetString("GuessMini"), pc.PlayerId);
+            else pc.ShowPopUp(GetString("GuessMini"));
             return true;
         }
 

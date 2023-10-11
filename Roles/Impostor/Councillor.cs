@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using TOHE.Modules.ChatManager;
 using TOHE.Roles.Crewmate;
+using TOHE.Roles.Double;
 using UnityEngine;
 using static TOHE.Translator;
 
@@ -67,7 +69,7 @@ public static class Councillor
         int operate = 0; // 1:ID 2:猜测
         msg = msg.ToLower().TrimStart().TrimEnd();
         if (CheckCommond(ref msg, "id|guesslist|gl编号|玩家编号|玩家id|id列表|玩家列表|列表|所有id|全部id")) operate = 1;
-        else if (CheckCommond(ref msg, "shoot|guess|bet|st|gs|bt|猜|赌|sp|jj|tl|Murder|审判|判|审", false)) operate = 2;
+        else if (CheckCommond(ref msg, "sp|jj|tl|Murder|审判|判|审", false)) operate = 2;
         else return false;
 
         if (!pc.IsAlive())
@@ -84,7 +86,11 @@ public static class Councillor
         else if (operate == 2)
         {
 
-            if (TryHideMsg.GetBool()) GuessManager.TryHideMsg();
+            if (TryHideMsg.GetBool())
+            {
+                if (Options.NewHideMsg.GetBool()) ChatManager.SendPreviousMessagesToAll();
+                else GuessManager.TryHideMsg();
+            }
             else if (pc.AmOwner) Utils.SendMessage(originMsg, 255, pc.GetRealName());
 
             if (!MsgToPlayerAndRole(msg, out byte targetId, out string error))
@@ -114,6 +120,12 @@ public static class Councillor
                     if (!isUI) Utils.SendMessage(GetString("LaughToWhoMurderSelf"), pc.PlayerId, Utils.ColorString(Color.cyan, GetString("MessageFromKPD")));
                     else pc.ShowPopUp(Utils.ColorString(Color.cyan, GetString("MessageFromKPD")) + "\n" + GetString("LaughToWhoMurderSelf"));
                     CouncillorSuicide = true;
+                }
+                if ((target.Is(CustomRoles.NiceMini) || target.Is(CustomRoles.EvilMini)) && Mini.Age < 18)
+                {
+                    if (!isUI) Utils.SendMessage(GetString("GuessMini"), pc.PlayerId);
+                    else pc.ShowPopUp(GetString("GuessMini"));
+                    return true;
                 }
                 else if (target.Is(CustomRoles.Madmate) && CanMurderMadmate.GetBool()) CouncillorSuicide = false;
                 else if (target.Is(CustomRoles.Parasite) && CanMurderMadmate.GetBool()) CouncillorSuicide = false;

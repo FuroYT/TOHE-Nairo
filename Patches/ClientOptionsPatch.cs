@@ -1,6 +1,4 @@
-using Discord;
 using HarmonyLib;
-using TOHE.Patches;
 using UnityEngine;
 
 namespace TOHE;
@@ -9,8 +7,6 @@ namespace TOHE;
 [HarmonyPatch(typeof(OptionsMenuBehaviour), nameof(OptionsMenuBehaviour.Start))]
 public static class OptionsMenuBehaviourStartPatch
 {
-    private static ClientOptionItem oldMainMenuBg;
-    private static ClientOptionItem StreamerMode;
     private static ClientOptionItem UnlockFPS;
     private static ClientOptionItem ShowFPS;
     private static ClientOptionItem EnableGM;
@@ -102,21 +98,6 @@ public static class OptionsMenuBehaviourStartPatch
             {
                 Harmony.UnpatchAll();
                 Main.Instance.Unload();
-            }
-        }
-        if (oldMainMenuBg == null || oldMainMenuBg.ToggleButton == null)
-        {
-            oldMainMenuBg = ClientOptionItem.Create("oldMainMenuBg", Main.oldMainMenuBg, __instance);
-        }
-        if (StreamerMode == null || StreamerMode.ToggleButton == null)
-        {
-            StreamerMode = ClientOptionItem.Create("StreamerMode", Main.StreamerMode, __instance, onChangeStreamer);
-            static void onChangeStreamer()
-            {
-                string status = "off";
-                if (Main.StreamerMode.Value) status = "on";
-                Logger.SendInGame($"Streamer Mode is now {status}");
-                //DiscordRPC.Prefix(null);
             }
         }
         /*      if ((VersionCheat == null || VersionCheat.ToggleButton == null) && DebugModeManager.AmDebugger)

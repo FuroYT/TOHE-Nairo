@@ -96,7 +96,7 @@ public static class Shroud
             float dis;
             foreach (var target in Main.AllAlivePlayerControls)
             {
-                if (target.PlayerId != shroud.PlayerId && !target.Is(CustomRoles.Shroud) && !target.Is(CustomRoles.Glitch) && !target.Is(CustomRoles.Pestilence))
+                if (target.PlayerId != shroud.PlayerId && !target.Is(CustomRoles.Shroud) && !target.Is(CustomRoles.Pestilence))
                 {
                     dis = Vector2.Distance(shroudPos, target.transform.position);
                     targetDistance.Add(target.PlayerId, dis);
@@ -128,11 +128,11 @@ public static class Shroud
 
     public static void MurderShroudedPlayers(PlayerControl shrouded)
     {
-        if (ShroudList.ContainsKey(shrouded.PlayerId))
-        {
-            shrouded.RpcMurderPlayerV3(shrouded);
-            Main.PlayerStates[shrouded.PlayerId].deathReason = PlayerState.DeathReason.Shrouded;
-        }
+        if (!ShroudList.ContainsKey(shrouded.PlayerId)) return;
+
+        shrouded.RpcMurderPlayerV3(shrouded);
+        Main.PlayerStates[shrouded.PlayerId].deathReason = PlayerState.DeathReason.Shrouded;
+
         ShroudList.Clear();
         SendRPC(byte.MaxValue, byte.MaxValue, 0);
     }

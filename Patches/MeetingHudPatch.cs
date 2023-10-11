@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using TOHE.Roles.Crewmate;
+using TOHE.Roles.Double;
 using TOHE.Roles.Impostor;
 using TOHE.Roles.Neutral;
 using UnityEngine;
@@ -50,7 +51,7 @@ class CheckForEndVotingPatch
                     }
                 }
 
-//催眠师催眠
+                //催眠师催眠
 
                 if (pc.Is(CustomRoles.Dictator) && pva.DidVote && pc.PlayerId != pva.VotedFor && pva.VotedFor < 253 && !pc.Data.IsDead)
                 {
@@ -67,6 +68,8 @@ class CheckForEndVotingPatch
                     {
                         __instance.RpcVotingComplete(states.ToArray(), null, true);
                         ExileControllerWrapUpPatch.AntiBlackout_LastExiled = voteTarget.Data;
+                        AntiBlackout.ShowExiledInfo = true;
+                        ConfirmEjections(voteTarget.Data, true);
                     }
                     else __instance.RpcVotingComplete(states.ToArray(), voteTarget.Data, false); //通常処理
 
@@ -189,18 +192,20 @@ class CheckForEndVotingPatch
                     }
                 }
 
-                //隐藏占卜师的票
-                if (CheckRole(ps.TargetPlayerId, CustomRoles.Divinator) && Divinator.HideVote.GetBool()) continue;
-                //隐藏抹除者的票
-                if (CheckRole(ps.TargetPlayerId, CustomRoles.Eraser) && Eraser.HideVote.GetBool()) continue;
-
-                if (CheckRole(ps.TargetPlayerId, CustomRoles.Tracker) && Tracker.HideVote.GetBool()) continue;
-
+                // Hide Divinator Vote
+                if (CheckRole(ps.TargetPlayerId, CustomRoles.Divinator) && Divinator.HideVote.GetBool() && Divinator.TempCheckLimit[ps.TargetPlayerId] > 0) continue;
+                // Hide Eraser Vote
+                if (CheckRole(ps.TargetPlayerId, CustomRoles.Eraser) && Eraser.HideVote.GetBool() && Eraser.TempEraseLimit[ps.TargetPlayerId] > 0) continue;
+                // Hide Tracker Vote
+                if (CheckRole(ps.TargetPlayerId, CustomRoles.Tracker) && Tracker.HideVote.GetBool() && Tracker.TempTrackLimit[ps.TargetPlayerId] > 0) continue;
+                // Hide Oracle Vote
+                if (CheckRole(ps.TargetPlayerId, CustomRoles.Oracle) && Oracle.HideVote.GetBool() && Oracle.TempCheckLimit[ps.TargetPlayerId] > 0) continue;
+                // Hide Oracle Vote
+                if (CheckRole(ps.TargetPlayerId, CustomRoles.Cleanser) && Cleanser.HideVote.GetBool() && Cleanser.CleanserUses[ps.TargetPlayerId] > 0) continue;
+                
+                // Hide Jester Vote
                 if (CheckRole(ps.TargetPlayerId, CustomRoles.Jester) && Options.HideJesterVote.GetBool()) continue;
 
-                if (CheckRole(ps.TargetPlayerId, CustomRoles.Glitch)) continue;
-
-                if (CheckRole(ps.TargetPlayerId, CustomRoles.Oracle) && Oracle.HideVote.GetBool()) continue;
 
                 //主动叛变模式下自票无效
                 if (ps.TargetPlayerId == ps.VotedFor && Options.MadmateSpawnMode.GetInt() == 2) continue;
@@ -376,6 +381,11 @@ class CheckForEndVotingPatch
             {
                 __instance.RpcVotingComplete(states.ToArray(), null, true);
                 ExileControllerWrapUpPatch.AntiBlackout_LastExiled = exiledPlayer;
+                if (exiledPlayer != null)
+                {
+                    AntiBlackout.ShowExiledInfo = true;
+                    ConfirmEjections(exiledPlayer, true);
+                }
             }
             else __instance.RpcVotingComplete(states.ToArray(), exiledPlayer, tie); // Normal processing
 
@@ -395,7 +405,7 @@ class CheckForEndVotingPatch
     }
 
     // 参考：https://github.com/music-discussion/TownOfHost-TheOtherRoles
-    private static void ConfirmEjections(GameData.PlayerInfo exiledPlayer)
+    private static void ConfirmEjections(GameData.PlayerInfo exiledPlayer, bool AntiBlackoutStore =  false)
     {
         if (!AmongUsClient.Instance.AmHost) return;
         if (exiledPlayer == null) return;
@@ -419,7 +429,7 @@ class CheckForEndVotingPatch
         var name = "";
         int impnum = 0;
         int neutralnum = 0;
-        int covennum = 0;
+    //    int covennum = 0;
 
         if (CustomRolesHelper.RoleExist(CustomRoles.Bard))
         {
@@ -433,12 +443,12 @@ class CheckForEndVotingPatch
         foreach (var pc in Main.AllAlivePlayerControls)
         {
             var pc_role = pc.GetCustomRole();
-            if (pc_role.IsImpostor() && pc != exiledPlayer.Object)
+            if (pc_role.IsImpostor() && !pc.Is(CustomRoles.Trickster) && pc != exiledPlayer.Object)
                 impnum++;
             else if (pc_role.IsNK() && pc != exiledPlayer.Object)
                 neutralnum++;
-            else if (pc_role.IsCoven() && pc != exiledPlayer.Object)
-                covennum++;
+        /*    else if (pc_role.IsCoven() && pc != exiledPlayer.Object)
+                covennum++; */
         }
         switch (Options.CEMode.GetInt())
         {
@@ -450,7 +460,7 @@ class CheckForEndVotingPatch
                     name = string.Format(GetString("BelongTo"), realName, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Impostor), GetString("TeamImpostor")));
                 else if (player.GetCustomRole().IsCrewmate())
                     name = string.Format(GetString("IsGood"), realName);
-                else if (player.GetCustomRole().IsNeutral() && !player.GetCustomRole().IsCoven() && !player.Is(CustomRoles.Parasite) && !player.Is(CustomRoles.Refugee) && !player.Is(CustomRoles.Crewpostor) && !player.Is(CustomRoles.Convict))
+                else if (player.GetCustomRole().IsNeutral() && !player.Is(CustomRoles.Parasite) && !player.Is(CustomRoles.Refugee) && !player.Is(CustomRoles.Crewpostor) && !player.Is(CustomRoles.Convict))
                     name = string.Format(GetString("BelongTo"), realName, Utils.ColorString(new Color32(127, 140, 141, byte.MaxValue), GetString("TeamNeutral")));
                 break;
             case 2:
@@ -460,17 +470,23 @@ class CheckForEndVotingPatch
                     name += " (";
                     if (player.GetCustomRole().IsImpostor() || player.Is(CustomRoles.Madmate))
                         name += Utils.ColorString(new Color32(255, 25, 25, byte.MaxValue), GetString("TeamImpostor"));
-                    else if (player.GetCustomRole().IsNeutral() && !player.GetCustomRole().IsCoven() || player.Is(CustomRoles.Charmed))
+                    else if (player.GetCustomRole().IsNeutral() || player.Is(CustomRoles.Charmed))
                         name += Utils.ColorString(new Color32(127, 140, 141, byte.MaxValue), GetString("TeamNeutral"));
                     else if (player.GetCustomRole().IsCrewmate())
                         name += Utils.ColorString(new Color32(140, 255, 255, byte.MaxValue), GetString("TeamCrewmate"));
-                    else if (player.GetCustomRole().IsCoven())
-                        name += Utils.ColorString(new Color32(140, 255, 255, byte.MaxValue), GetString("TeamCoven"));
                     name += ")";
                 }
                 break;
         }
         var DecidedWinner = false;
+
+        //迷你船员长大前被驱逐抢夺胜利
+    /*    if (crole == CustomRoles.NiceMini && Mini.Age !< 18)
+        {
+            name = string.Format(GetString("ExiledNiceMini"), realName, coloredRole);
+            DecidedWinner = true;
+        } */
+
         //小丑胜利
    /*     if (crole == CustomRoles.Jester)
         {
@@ -499,7 +515,7 @@ class CheckForEndVotingPatch
         {
             name += "\n";
             string comma = neutralnum > 0 ? "" : "";
-            string commacoven = covennum > 0 ? "" : "";
+        //    string commacoven = covennum > 0 ? "" : "";
             if (impnum == 0) name += GetString("NoImpRemain") + comma;
             if (impnum == 1) name += GetString("OneImpRemain") + comma;
             if (impnum == 2) name += GetString("TwoImpRemain") + comma;
@@ -510,30 +526,33 @@ class CheckForEndVotingPatch
                 name += string.Format(GetString("OneNeutralRemain"), neutralnum) + comma;
                 else
                 name += string.Format(GetString("NeutralRemain"), neutralnum) + comma;
-            if (Options.ShowCovenRemainOnEject.GetBool() && covennum > 0)
-                if (covennum == 1)
-                name += string.Format(GetString("OneCovenRemain"), covennum) + comma;
-                else
-                name += string.Format(GetString("CovenRemain"), covennum) + comma;
         }
 
     EndOfSession:
 
 
         name += "<size=0>";
-        _ = new LateTask(() =>
+        if (!AntiBlackoutStore)
         {
-            Main.DoBlockNameChange = true;
-            if (GameStates.IsInGame) player.RpcSetName(name);
-        }, 3.0f, "Change Exiled Player Name");
-        _ = new LateTask(() =>
-        {
-            if (GameStates.IsInGame && !player.Data.Disconnected)
+            _ = new LateTask(() =>
             {
-                player.RpcSetName(realName);
-                Main.DoBlockNameChange = false;
-            }
-        }, 11.5f, "Change Exiled Player Name Back");
+                Main.DoBlockNameChange = true;
+                if (GameStates.IsInGame) player.RpcSetName(name);
+            }, 3.0f, "Change Exiled Player Name");
+            _ = new LateTask(() =>
+            {
+                if (GameStates.IsInGame && !player.Data.Disconnected)
+                {
+                    player.RpcSetName(realName);
+                    Main.DoBlockNameChange = false;
+                }
+            }, 11.5f, "Change Exiled Player Name Back");
+        }
+        else
+        {
+            AntiBlackout.StoreExiledMessage = name;
+            Logger.Info(AntiBlackout.StoreExiledMessage, "AntiBlackoutStore");
+        }
     }
     public static bool CheckRole(byte id, CustomRoles role)
     {
@@ -628,9 +647,6 @@ static class ExtendedMeetingHud
                 if (CheckForEndVotingPatch.CheckRole(ps.TargetPlayerId, CustomRoles.Knighted)
                     && ps.TargetPlayerId != ps.VotedFor
                     ) VoteNum += 1;
-                if (CheckForEndVotingPatch.CheckRole(ps.TargetPlayerId, CustomRoles.Glitch)
-                    && ps.TargetPlayerId != ps.VotedFor
-                    ) VoteNum = 0;
                 if (CheckForEndVotingPatch.CheckRole(ps.TargetPlayerId, CustomRoles.Vindicator)
                     && ps.TargetPlayerId != ps.VotedFor
                     ) VoteNum += Options.VindicatorAdditionalVote.GetInt();
@@ -729,8 +745,7 @@ class MeetingHudStartPatch
             //黑手党死后技能提示
             if (pc.Is(CustomRoles.Mafia) && !pc.IsAlive())
                 AddMsg(GetString("MafiaDeadMsg"), pc.PlayerId);
-            if (pc.Is(CustomRoles.Necromancer) && !pc.IsAlive())
-                AddMsg(GetString("NecromancerDeadMsg"), pc.PlayerId);
+            //惩罚者死后技能提示
             if (pc.Is(CustomRoles.Retributionist) && !pc.IsAlive())
                 AddMsg(GetString("RetributionistDeadMsg"), pc.PlayerId);
             //网红死亡消息提示
@@ -740,7 +755,21 @@ class MeetingHudStartPatch
                 if (!Options.NeutralKnowCyberStarDead.GetBool() && pc.GetCustomRole().IsNeutral()) continue;
                 AddMsg(string.Format(GetString("CyberStarDead"), Main.AllPlayerNames[csId]), pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.CyberStar), GetString("CyberStarNewsTitle")));
             }
-
+            //网络人死亡消息提示
+            foreach (var csId in Main.CyberDead)
+            {
+                if (!Options.ImpKnowCyberDead.GetBool() && pc.GetCustomRole().IsImpostor()) continue;
+                if (!Options.NeutralKnowCyberDead.GetBool() && pc.GetCustomRole().IsNeutral()) continue;
+                if (!Options.CrewKnowCyberDead.GetBool() && pc.GetCustomRole().IsCrewmate()) continue;
+                AddMsg(string.Format(GetString("CyberDead"), Main.AllPlayerNames[csId]), pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Cyber), GetString("CyberNewsTitle")));
+            }
+            //勒索者勒索警告
+            if (Blackmailer.IsEnable && pc != null && Blackmailer.ForBlackmailer.Contains(pc.PlayerId))
+            {
+                var playername = pc.GetRealName();
+                if (Doppelganger.DoppelVictim.Keys.Contains(pc.PlayerId)) playername = Doppelganger.DoppelVictim[pc.PlayerId];
+                AddMsg(string.Format(GetString("BlackmailerDead"), playername, pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Blackmailer), GetString("BlackmaileKillTitle"))));
+            }
             //侦探报告线索
             if (Main.DetectiveNotify.ContainsKey(pc.PlayerId))
                 AddMsg(Main.DetectiveNotify[pc.PlayerId], pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Detective), GetString("DetectiveNoticeTitle")));
@@ -752,16 +781,14 @@ class MeetingHudStartPatch
             //入殓师的检查
             if (Mortician.msgToSend.ContainsKey(pc.PlayerId))
                 AddMsg(Mortician.msgToSend[pc.PlayerId], pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Mortician), GetString("MorticianCheckTitle")));
-            //通灵师的提示（自己）
+            //调查员的提示（自己）
             if (Mediumshiper.ContactPlayer.ContainsValue(pc.PlayerId))
                 AddMsg(string.Format(GetString("MediumshipNotifySelf"), Main.AllPlayerNames[Mediumshiper.ContactPlayer.Where(x => x.Value == pc.PlayerId).FirstOrDefault().Key], Mediumshiper.ContactLimit[pc.PlayerId]), pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Mediumshiper), GetString("MediumshipTitle")));
-            //通灵师的提示（目标）
+            //调查员的提示（目标）
             if (Mediumshiper.ContactPlayer.ContainsKey(pc.PlayerId) && (!Mediumshiper.OnlyReceiveMsgFromCrew.GetBool() || pc.GetCustomRole().IsCrewmate()))
                 AddMsg(string.Format(GetString("MediumshipNotifyTarget"), Main.AllPlayerNames[Mediumshiper.ContactPlayer[pc.PlayerId]]), pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Mediumshiper), GetString("MediumshipTitle")));
             if (Main.VirusNotify.ContainsKey(pc.PlayerId))
                 AddMsg(Main.VirusNotify[pc.PlayerId], pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Virus), GetString("VirusNoticeTitle")));
-            if (Tracker.msgToSend.ContainsKey(pc.PlayerId))
-                AddMsg(Tracker.msgToSend[pc.PlayerId], pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Tracker), GetString("TrackerTitle")));
         }
         //宝箱怪的消息（合并）
         if (MimicMsg != "")
@@ -777,11 +804,11 @@ class MeetingHudStartPatch
         _ = new LateTask(() => { msgToSend.Do(x => Utils.SendMessage(x.Item1, x.Item2, x.Item3)); }, 3f, "Skill Notice OnMeeting Start");
 
         Main.CyberStarDead.Clear();
+        Main.CyberDead.Clear();
         Main.DetectiveNotify.Clear();
         Main.SleuthNotify.Clear();
         Main.VirusNotify.Clear();
         Mortician.msgToSend.Clear();
-        Tracker.msgToSend.Clear();
         Pirate.OnMeetingStart();
     }
     public static void Prefix(MeetingHud __instance)
@@ -859,6 +886,20 @@ class MeetingHudStartPatch
             }, 5f, "Warning ImpostorOverrideExiledPlayer");
         }
 
+        if (AntiBlackout.ShowExiledInfo)
+        {
+            AntiBlackout.ShowExiledInfo = false;
+            if (AntiBlackout.StoreExiledMessage != "")
+            {
+                AntiBlackout.StoreExiledMessage = GetString("Warning.ShowAntiBlackExiledPlayer") + AntiBlackout.StoreExiledMessage;
+                _ = new LateTask(() =>
+                {
+                    Utils.SendMessage(AntiBlackout.StoreExiledMessage, 255, Utils.ColorString(Color.red, GetString("DefaultSystemMessageTitle")));
+                    AntiBlackout.StoreExiledMessage = "";
+                }, 5.5f, "AntiBlackout.StoreExiledMessage");
+            }
+        }
+
         if (MeetingStates.FirstMeeting) TemplateManager.SendTemplate("OnFirstMeeting", noErr: true);
         TemplateManager.SendTemplate("OnMeeting", noErr: true);
 
@@ -901,9 +942,9 @@ class MeetingHudStartPatch
                 if (Options.ImpostorsCanGuess.GetBool() && seer.GetCustomRole().IsImpostor() && !seer.Is(CustomRoles.Councillor))
                     if (!seer.Data.IsDead && !target.Data.IsDead)
                         pva.NameText.text = Utils.ColorString(Utils.GetRoleColor(seer.GetCustomRole()), target.PlayerId.ToString()) + " " + pva.NameText.text;
-                if (Options.CovenMembersCanGuess.GetBool() && seer.GetCustomRole().IsCoven() && !seer.Is(CustomRoles.Ritualist))
-                    if (!seer.Data.IsDead && !target.Data.IsDead)
-                        pva.NameText.text = Utils.ColorString(Utils.GetRoleColor(seer.GetCustomRole()), target.PlayerId.ToString()) + " " + pva.NameText.text;
+            //    if (Options.CovenMembersCanGuess.GetBool() && seer.GetCustomRole().IsCoven() && !seer.Is(CustomRoles.Ritualist))
+            //        if (!seer.Data.IsDead && !target.Data.IsDead)
+            //            pva.NameText.text = Utils.ColorString(Utils.GetRoleColor(seer.GetCustomRole()), target.PlayerId.ToString()) + " " + pva.NameText.text;
                 if (Options.NeutralKillersCanGuess.GetBool() && seer.GetCustomRole().IsNK())
                     if (!seer.Data.IsDead && !target.Data.IsDead)
                         pva.NameText.text = Utils.ColorString(Utils.GetRoleColor(seer.GetCustomRole()), target.PlayerId.ToString()) + " " + pva.NameText.text;
@@ -981,12 +1022,15 @@ class MeetingHudStartPatch
                 case CustomRoles.Banshee:
                 case CustomRoles.Infectious:
                 case CustomRoles.RuthlessRomantic:
+                case CustomRoles.Necromancer:
                 case CustomRoles.Virus:
+                case CustomRoles.Pyromaniac:
                 case CustomRoles.Medusa:
                 case CustomRoles.Succubus:
                 case CustomRoles.CovenLeader:
                 case CustomRoles.Pickpocket:
                 case CustomRoles.PotionMaster:
+                case CustomRoles.Huntsman:
                 case CustomRoles.Traitor:
                 case CustomRoles.Spiritcaller:
                     sb.Append(Snitch.GetWarningMark(seer, target));
@@ -1015,11 +1059,6 @@ class MeetingHudStartPatch
                 case CustomRoles.Mafia:
                     if (seer.Data.IsDead && !target.Data.IsDead)
                         pva.NameText.text = Utils.ColorString(Utils.GetRoleColor(CustomRoles.Mafia), target.PlayerId.ToString()) + " " + pva.NameText.text;
-                    break;
-                case CustomRoles.Necromancer:
-                    sb.Append(Snitch.GetWarningMark(seer, target));
-                    if (seer.Data.IsDead && !target.Data.IsDead)
-                        pva.NameText.text = Utils.ColorString(Utils.GetRoleColor(CustomRoles.Necromancer), target.PlayerId.ToString()) + " " + pva.NameText.text;
                     break;
                 case CustomRoles.Retributionist:
                     if (seer.Data.IsDead && !target.Data.IsDead)
@@ -1121,10 +1160,25 @@ class MeetingHudStartPatch
             if (target.PlayerId == Pirate.PirateTarget)
                 sb.Append(Pirate.GetPlunderedMark(target.PlayerId, true));
 
-
             //如果是大明星
             if (target.Is(CustomRoles.SuperStar) && Options.EveryOneKnowSuperStar.GetBool())
                 sb.Append(Utils.ColorString(Utils.GetRoleColor(CustomRoles.SuperStar), "★"));
+            
+            //网络人提示
+            if (target.Is(CustomRoles.Cyber) && Options.CyberKnown.GetBool())
+                sb.Append(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Cyber), "★"));
+            
+            //玩家被勒索提示
+            if (Blackmailer.ForBlackmailer.Contains(target.PlayerId))
+                sb.Append(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Blackmailer), "╳")); 
+            
+            //迷你船员提示
+            if (target.Is(CustomRoles.NiceMini) && Mini.EveryoneCanKnowMini.GetBool())
+                sb.Append(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Mini), Mini.Age != 18 && Mini.UpDateAge.GetBool() ? $"({Mini.Age})" : ""));
+
+            //迷你船员提示
+            if (target.Is(CustomRoles.EvilMini) && Mini.EveryoneCanKnowMini.GetBool())
+                sb.Append(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Mini), Mini.Age != 18 && Mini.UpDateAge.GetBool() ? $"({Mini.Age})" : ""));
 
             //球状闪电提示
             if (BallLightning.IsGhost(target))
@@ -1209,8 +1263,6 @@ class MeetingHudUpdatePatch
             //若黑手党死亡则创建技能按钮
             if (myRole is CustomRoles.Mafia && !PlayerControl.LocalPlayer.IsAlive() && GameObject.Find("ShootButton") == null)
                 MafiaRevengeManager.CreateJudgeButton(__instance);
-            if (myRole is CustomRoles.Necromancer && !PlayerControl.LocalPlayer.IsAlive() && GameObject.Find("ShootButton") == null)
-                NecromancerRevengeManager.CreateJudgeButton(__instance);
             if (myRole is CustomRoles.Retributionist && !PlayerControl.LocalPlayer.IsAlive() && GameObject.Find("ShootButton") == null)
                 RetributionistRevengeManager.CreateJudgeButton(__instance);
 

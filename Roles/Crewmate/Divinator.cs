@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using static TOHE.Options;
 using static TOHE.Translator;
 
@@ -19,6 +18,7 @@ public static class Divinator
 
     public static List<byte> didVote = new();
     public static Dictionary<byte, float> CheckLimit = new();
+    public static Dictionary<byte, float> TempCheckLimit = new();
 
     public static void SetupCustomOption()
     {
@@ -36,6 +36,7 @@ public static class Divinator
     {
         playerIdList = new();
         CheckLimit = new();
+        TempCheckLimit = new();
         IsEnable = false;
     }
     public static void Add(byte playerId)
@@ -71,7 +72,6 @@ public static class Divinator
             msg = string.Format(GetString("DivinatorCheck.TaskDone"), target.GetRealName(), GetString(target.GetCustomRole().ToString()));
         }
         else
-        // Investigator
         {
             string text = target.GetCustomRole() switch
             {
@@ -91,6 +91,8 @@ public static class Divinator
                 CustomRoles.Monitor or
                 CustomRoles.Dazzler or
                 CustomRoles.Grenadier or
+                CustomRoles.Imitator or
+                CustomRoles.Bandit or
                 CustomRoles.Lighter
                 => "Result1",
 
@@ -136,7 +138,6 @@ public static class Divinator
                 CustomRoles.Seeker or
                 CustomRoles.Tracker or
                 CustomRoles.Romantic
-
                 => "Result6",
 
 
@@ -177,7 +178,9 @@ public static class Divinator
                 CustomRoles.Addict or
                 CustomRoles.Escapee or
                 CustomRoles.Miner or
+                CustomRoles.Bastion or
                 CustomRoles.Chronomancer or
+                CustomRoles.Alchemist or
                 CustomRoles.Morphling
                 => "Result11",
 
@@ -186,6 +189,7 @@ public static class Divinator
                 CustomRoles.CyberStar or
                 CustomRoles.SuperStar or
                 CustomRoles.Deathpact or
+                CustomRoles.Investigator or
                 CustomRoles.Devourer
                 => "Result12",
 
@@ -193,12 +197,14 @@ public static class Divinator
                 CustomRoles.Oracle or
                 CustomRoles.Pirate or
                 CustomRoles.Visionary or
+                CustomRoles.Blackmailer or
                 CustomRoles.ParityCop
                 => "Result13",
 
                 CustomRoles.Hacker or
                 CustomRoles.Mayor or
                 CustomRoles.Paranoia or
+                CustomRoles.Mastermind or
                 CustomRoles.Pickpocket or
                 CustomRoles.Vindicator
                 => "Result14",
@@ -242,7 +248,8 @@ public static class Divinator
                 CustomRoles.Ritualist or
                 CustomRoles.Camouflager or
                 CustomRoles.Shade or
-                CustomRoles.Chameleon
+                CustomRoles.Chameleon or
+                CustomRoles.Doppelganger
                 => "Result19",
 
                 CustomRoles.Jackal or
@@ -257,6 +264,7 @@ public static class Divinator
                 CustomRoles.Vampire or
                 CustomRoles.DovesOfNeace or
                 CustomRoles.ImperiusCurse or
+                CustomRoles.Huntsman or
                 CustomRoles.CovenLeader or
                 CustomRoles.Traitor
                 => "Result21",
@@ -288,6 +296,7 @@ public static class Divinator
                 CustomRoles.Jinx or
                 CustomRoles.SwordsMan or
                 CustomRoles.Veteran or
+                CustomRoles.Pyromaniac or
                 CustomRoles.TaskManager or
                 CustomRoles.Shroud or
                 CustomRoles.Hangman or
@@ -307,6 +316,7 @@ public static class Divinator
                 CustomRoles.TimeThief or
                 CustomRoles.ShapeMaster or
                 CustomRoles.Werewolf or
+                CustomRoles.Vampiress or
                 CustomRoles.Sniper
                 => "Result27",
 
@@ -322,6 +332,8 @@ public static class Divinator
                 CustomRoles.Marshall or
                 CustomRoles.Workaholic or
                 CustomRoles.Phantom or
+                CustomRoles.NiceMini or
+                CustomRoles.EvilMini or
                 CustomRoles.Terrorist
                 => "Result29",
 
@@ -480,5 +492,14 @@ public static class Divinator
            }*/
 
         Utils.SendMessage(GetString("DivinatorCheck") + "\n" + msg + "\n\n" + string.Format(GetString("DivinatorCheckLimit"), CheckLimit[player.PlayerId]), player.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Divinator), GetString("DivinatorCheckMsgTitle")));
+    }
+    public static void OnReportDeadBody()
+    {
+        if (!IsEnable) return;
+
+        foreach (var divinatorId in playerIdList)
+        {
+            TempCheckLimit[divinatorId] = CheckLimit[divinatorId];
+        }
     }
 }

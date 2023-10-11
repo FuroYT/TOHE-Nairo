@@ -70,11 +70,11 @@ public class PlayerState
         }
         if (role == CustomRoles.Arsonist)
         {
-            if (Options.ArsonistKeepsGameGoing.GetBool())
+            if (Options.ArsonistCanIgniteAnytime.GetBool())
             {
                 countTypes = CountTypes.Arsonist;
             }
-            if (!Options.ArsonistKeepsGameGoing.GetBool())
+            if (!Options.ArsonistCanIgniteAnytime.GetBool())
             {
                 countTypes = CountTypes.Crew;
             }
@@ -197,6 +197,15 @@ public class PlayerState
             SubRoles.Remove(CustomRoles.Loyal);
             SubRoles.Remove(CustomRoles.Admired);
         }
+
+        // This exist as it would be possible for them to exist on the same player via Bandit, but since Bandit can't vent without Nimble, allowing them to have Circumvent is pointless
+        if (role == CustomRoles.Nimble)
+        {
+            SubRoles.Remove(CustomRoles.Circumvent);
+        }
+
+
+
         if (role == CustomRoles.Admired)
         {
             countTypes = CountTypes.Crew;
@@ -426,6 +435,14 @@ public class TaskState
 
                 }
             }
+            if (player.Is(CustomRoles.Bloodlust) && player.IsAlive() && !Main.BloodlustList.ContainsKey(player.PlayerId))
+            {
+                Main.BloodlustList[player.PlayerId] = player.PlayerId;
+                player.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Bloodlust), string.Format(Translator.GetString("BloodlustAdded"))));
+            }
+
+            if (player.Is(CustomRoles.Alchemist) && player.IsAlive()) Alchemist.OnTaskComplete(player);
+
             if (player.Is(CustomRoles.Divinator) && player.IsAlive())
             {
                 Divinator.CheckLimit[player.PlayerId] += Divinator.AbilityUseGainWithEachTaskCompleted.GetFloat();
@@ -437,6 +454,10 @@ public class TaskState
             if (player.Is(CustomRoles.Grenadier) && player.IsAlive())
             {
                 Main.GrenadierNumOfUsed[player.PlayerId] += Options.GrenadierAbilityUseGainWithEachTaskCompleted.GetFloat();
+            }
+            if (player.Is(CustomRoles.Bastion) && player.IsAlive())
+            {
+                Main.BastionNumberOfAbilityUses += Options.BastionAbilityUseGainWithEachTaskCompleted.GetFloat();
             }
             if (player.Is(CustomRoles.Lighter) && player.IsAlive())
             {
@@ -468,7 +489,8 @@ public class TaskState
             } */
             if (player.Is(CustomRoles.SabotageMaster) && player.IsAlive())
             {
-                SabotageMaster.UsedSkillCount -= SabotageMaster.SMAbilityUseGainWithEachTaskCompleted.GetFloat();
+                SabotageMaster.UsedSkillCount[player.PlayerId] -= SabotageMaster.SMAbilityUseGainWithEachTaskCompleted.GetFloat();
+                SabotageMaster.SendRPC(player.PlayerId);
             }
             if (player.Is(CustomRoles.Tracker) && player.IsAlive())
             {

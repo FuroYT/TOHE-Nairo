@@ -1,6 +1,7 @@
 ﻿using Hazel;
 using System.Collections.Generic;
 using System.Linq;
+using TOHE.Roles.Double;
 using UnityEngine;
 using static TOHE.Options;
 using static TOHE.Translator;
@@ -76,7 +77,11 @@ public static class Succubus
     public static void OnCheckMurder(PlayerControl killer, PlayerControl target)
     {
         if (CharmLimit < 1) return;
-        if (CanBeCharmed(target))
+        if (Mini.Age != 18 && (target.Is(CustomRoles.NiceMini) || target.Is(CustomRoles.EvilMini)))
+        {
+            killer.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Succubus), GetString("Cantkillkid")));
+        }
+        else if (CanBeCharmed(target) && Mini.Age == 18 || CanBeCharmed(target) && Mini.Age != 18 && !(target.Is(CustomRoles.NiceMini) || target.Is(CustomRoles.EvilMini)))
         {
             CharmLimit--;
             SendRPC();

@@ -22,6 +22,7 @@ namespace TOHE.Roles.Crewmate
             CustomRoles.Watcher,
             CustomRoles.Seer,
             CustomRoles.Bait,
+            CustomRoles.Cyber,
             CustomRoles.Trapper,
             CustomRoles.Brakar, // Tiebreaker
             CustomRoles.Necroview,
@@ -145,12 +146,14 @@ namespace TOHE.Roles.Crewmate
                     &&
                     (Cleanser.CleansedCanGetAddon.GetBool() || (!Cleanser.CleansedCanGetAddon.GetBool() && !x.Is(CustomRoles.Cleansed)))
                     &&
+                    (!x.Is(CustomRoles.Stubborn))
+                    &&
                     (
                         (OptionCanTargetCrew.GetBool() && CustomRolesHelper.IsCrewmate(x.GetCustomRole())) 
                         ||
                         (OptionCanTargetImpostor.GetBool() && CustomRolesHelper.IsImpostor(x.GetCustomRole()))
                         ||
-                        (OptionCanTargetNeutral.GetBool() && CustomRolesHelper.IsNeutral(x.GetCustomRole()) && !CustomRolesHelper.IsCoven(x.GetCustomRole()))
+                        (OptionCanTargetNeutral.GetBool() && CustomRolesHelper.IsNeutral(x.GetCustomRole()))
                     )
                 ).ToList();
 

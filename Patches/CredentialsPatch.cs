@@ -4,62 +4,12 @@ using TMPro;
 using UnityEngine;
 using TOHE.Modules;
 using static TOHE.Translator;
-using TOHE.Patches;
 
 namespace TOHE;
 
 [HarmonyPatch]
 public static class Credentials
 {
-    public static string GradientColorText(string startColorHex, string endColorHex, string text)
-    {
-        if (startColorHex.Length != 6 || endColorHex.Length != 6)
-        {
-            Logger.Error("Invalid color hex code. Hex code should be 6 characters long (without #) (e.g., FFFFFF).", "GradientColorText");
-            //throw new ArgumentException("Invalid color hex code. Hex code should be 6 characters long (e.g., FFFFFF).");
-            return text;
-        }
-
-        Color startColor = HexToColor(startColorHex);
-        Color endColor = HexToColor(endColorHex);
-
-        int textLength = text.Length;
-        float stepR = (endColor.r - startColor.r) / (float)textLength;
-        float stepG = (endColor.g - startColor.g) / (float)textLength;
-        float stepB = (endColor.b - startColor.b) / (float)textLength;
-        float stepA = (endColor.a - startColor.a) / (float)textLength;
-
-        string gradientText = "";
-
-        for (int i = 0; i < textLength; i++)
-        {
-            float r = startColor.r + (stepR * i);
-            float g = startColor.g + (stepG * i);
-            float b = startColor.b + (stepB * i);
-            float a = startColor.a + (stepA * i);
-
-
-            string colorHex = ColorToHex(new Color(r, g, b, a));
-            //Logger.Msg(colorHex, "color");
-            gradientText += $"<color=#{colorHex}>{text[i]}</color>";
-        }
-
-        return gradientText;
-    }
-
-    private static Color HexToColor(string hex)
-    {
-        Color color = new Color();
-        ColorUtility.TryParseHtmlString("#" + hex, out color);
-        return color;
-    }
-
-    private static string ColorToHex(Color color)
-    {
-        Color32 color32 = (Color32)color;
-        return $"{color32.r:X2}{color32.g:X2}{color32.b:X2}{color32.a:X2}";
-    }
-
     public static SpriteRenderer ToheLogo { get; private set; }
 
     [HarmonyPatch(typeof(PingTracker), nameof(PingTracker.Update))]
@@ -74,11 +24,6 @@ public static class Credentials
             sb.Clear();
 
             sb.Append(Main.credentialsText);
-
-            if (Main.StreamerMode.Value)
-            {
-                sb.Append("\r\n").Append("<color=#4c178c>Streamer Mode Enabled</color>").Append("\r\n").Append($"Follow {GradientColorText("d700f8", "4c178c", "arcade_nairo")} on <color=#4c178c>Twitch</color>");
-            }
 
             var ping = AmongUsClient.Instance.Ping;
             string pingcolor = "#ff4500";
@@ -125,15 +70,24 @@ public static class Credentials
         private static void Postfix(VersionShower __instance)
         {
             Main.credentialsText = $"\r\n<color={Main.ModColor}>{Main.ModName}</color> v{Main.PluginDisplayVersion}";
-            Main.credentialsText += $"\r\n<color=#a54aff>By <color=#ffc0cb>KARPED1EM</color> & </color><color=#f34c50>Loonie</color>\nEdited By {GradientColorText("1badec", "193ac9", "Furo")} for {GradientColorText("d700f8", "4c178c", "arcade_nairo")}";
-    
-            #if DEBUG
-            string additionalCredentials = "Dev Mode";
-            Main.credentialsText += $"\n{additionalCredentials}";
-            #endif
+
+#if RELEASE
+            //  Main.credentialsText += $"\r\n<color=#a54aff>Modified by </color><color=#ff3b6f>Moe</color>";
+            Main.credentialsText += $"\r\n<color=#a54aff>By <color=#ffc0cb>KARPED1EM</color> & </color><color=#f34c50>Moe</color>";
+#endif
+
+#if DEBUG
+         /* string additionalCredentials = GetString("TextBelowVersionText");
+            if (additionalCredentials != null && additionalCredentials != "*TextBelowVersionText")
+            {
+                Main.credentialsText += $"\n{additionalCredentials}";
+            } */
+
+            Main.credentialsText += $"\r\n<color=#a54aff>By <color=#ffc0cb>KARPED1EM</color> & </color><color=#f34c50>Moe</color>";
+#endif
 
             if (Main.IsAprilFools)
-                Main.credentialsText = $"\r\n<color=#00bfff>Town Of Host</color> v11.45.14\nEdited By {GradientColorText("1badec", "193ac9", "Furo")} for {GradientColorText("d700f8", "4c178c", "arcade_nairo")}";
+                Main.credentialsText = $"\r\n<color=#00bfff>Town Of Host</color> v11.45.14";
 
             var credentials = Object.Instantiate(__instance.text);
             credentials.text = Main.credentialsText;

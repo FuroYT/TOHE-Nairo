@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using TOHE.Modules;
 using TOHE.Roles.Impostor;
+using TOHE.Roles.Neutral;
 using UnityEngine;
 using static TOHE.Translator;
 
@@ -25,6 +26,22 @@ class EndGamePatch
         SummaryText = new();
         foreach (var id in Main.PlayerStates.Keys)
         {
+            if (Doppelganger.IsEnable)
+            {
+                if (Doppelganger.DoppelVictim.Keys.Contains(id))
+                {
+                    var dpc = Utils.GetPlayerById(id);
+                    if (dpc != null) 
+                    {
+                        //if (id == PlayerControl.LocalPlayer.PlayerId) Main.nickName = Doppelganger.DoppelVictim[id];
+                        //else
+                        //{ 
+                        dpc.RpcSetName(Doppelganger.DoppelVictim[id]);
+                        //}
+                        Main.AllPlayerNames[id] = Doppelganger.DoppelVictim[id];
+                    }
+                }
+            }
             if (Main.EnableRoleSummary.Value)
             {
                 SummaryText[id] = Utils.SummaryTexts(id, disableColor: false);
@@ -179,6 +196,12 @@ class SetEverythingUpPatch
                 WinnerText.text = GetString("ForceEndText");
                 WinnerText.color = Color.gray;
                 break;
+            case CustomWinner.NiceMini:
+            //    __instance.WinText.color = Utils.GetRoleColor(CustomRoles.Mini);
+                __instance.BackgroundBar.material.color = Utils.GetRoleColor(CustomRoles.Mini);
+            //    WinnerText.text = GetString("NiceMiniDied");
+                WinnerText.color = Utils.GetRoleColor(CustomRoles.Mini);
+                break;
             case CustomWinner.Neutrals:
                 __instance.WinText.text = GetString("DefeatText");
                 __instance.WinText.color = Utils.GetRoleColor(CustomRoles.Impostor);
@@ -265,7 +288,7 @@ class SetEverythingUpPatch
             }
             if (!Main.EnableRoleSummary.Value)
             {
-                RoleSummary.fontSizeMin = RoleSummary.fontSizeMax = RoleSummary.fontSize = 1f;
+                RoleSummary.fontSizeMin = RoleSummary.fontSizeMax = RoleSummary.fontSize = 1.25f;
             }
         }
         var RoleSummaryRectTransform = RoleSummary.GetComponent<RectTransform>();

@@ -1,4 +1,6 @@
 using Hazel;
+using TOHE.Roles.Crewmate;
+using TOHE.Roles.Double;
 using TOHE.Roles.Impostor;
 using TOHE.Roles.Neutral;
 
@@ -38,6 +40,9 @@ public static class NameColorManager
         if (seer.Is(CustomRoles.Madmate) && target.Is(CustomRoles.Madmate) && Options.MadmateKnowWhosMadmate.GetBool()) color = Main.roleColors[CustomRoles.Madmate];
         if (seer.Is(CustomRoles.Gangster) && target.Is(CustomRoles.Madmate)) color = Main.roleColors[CustomRoles.Madmate];
 
+        //СС��Ҳ�ܿɰ�))))
+        if (!seer.GetCustomRole().IsImpostorTeam() && (target.Is(CustomRoles.NiceMini) || target.Is(CustomRoles.EvilMini))) color = Main.roleColors[CustomRoles.Mini];
+
         // Succubus
         if (seer.Is(CustomRoles.Charmed) && target.Is(CustomRoles.Succubus)) color = Main.roleColors[CustomRoles.Succubus];
         if (seer.Is(CustomRoles.Succubus) && target.Is(CustomRoles.Charmed)) color = Main.roleColors[CustomRoles.Charmed];
@@ -50,13 +55,39 @@ public static class NameColorManager
         if (seer.Is(CustomRoles.Admirer) && (target.Is(CustomRoles.Admired))) color = Main.roleColors[CustomRoles.Admirer];
         if (seer.Is(CustomRoles.Admired) && (target.Is(CustomRoles.Admirer))) color = Main.roleColors[CustomRoles.Admirer];
 
-        if (seer.GetCustomRole().IsCoven() && (target.GetCustomRole().IsCoven())) color = Main.roleColors[CustomRoles.CovenLeader];
+        // Investigator
+    /*    if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsCK() && Investigator.CrewKillingShowAs.GetInt() == 0) color = "ff1919";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsCK() && Investigator.CrewKillingShowAs.GetInt() == 1) color = "00ff00";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsCK() && Investigator.CrewKillingShowAs.GetInt() == 2) color = "696969";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsNK() && Investigator.NeutralKillingShowAs.GetInt() == 0) color = "ff1919";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsNK() && Investigator.NeutralKillingShowAs.GetInt() == 1) color = "00ff00";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsNK() && Investigator.NeutralKillingShowAs.GetInt() == 2) color = "696969";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsNonNK() && Investigator.PassiveNeutralsShowAs.GetInt() == 0) color = "ff1919";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsNonNK() && Investigator.PassiveNeutralsShowAs.GetInt() == 1) color = "00ff00";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsNonNK() && Investigator.PassiveNeutralsShowAs.GetInt() == 2) color = "696969";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsImpostor()) color = "ff1919";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsMadmate()) color = "ff1919";
+        if (seer.Is(CustomRoles.Investigator) && Investigator.InvestigatedList.ContainsKey(target.PlayerId) && target.GetCustomRole().IsCrewmate() && !target.GetCustomRole().IsCK()) color = "00ff00"; */
+
+        // Bounties
+        if (seer.Is(CustomRoles.BountyHunter) && BountyHunter.GetTarget(seer) == target.PlayerId) color = "bf1313";
+        if (seer.Is(CustomRoles.Huntsman) && Huntsman.Targets.Contains(target.PlayerId)) color = "6e5524";
+
+        // Mastermind
+        if (seer.Is(CustomRoles.Mastermind) && Mastermind.ManipulateDelays.ContainsKey(target.PlayerId)) color = "#00ffa5";
+        if (seer.Is(CustomRoles.Mastermind) && Mastermind.ManipulatedPlayers.ContainsKey(target.PlayerId)) color = Main.roleColors[CustomRoles.Arsonist];
+
+
+    //    if (seer.GetCustomRole().IsCoven() && (target.GetCustomRole().IsCoven())) color = Main.roleColors[CustomRoles.CovenLeader];
 
         // Amnesiac
         if (seer.Is(CustomRoles.Jackal) && (target.Is(CustomRoles.Jackal))) color = Main.roleColors[CustomRoles.Jackal];
         if (seer.Is(CustomRoles.Juggernaut) && (target.Is(CustomRoles.Juggernaut))) color = Main.roleColors[CustomRoles.Juggernaut];
         if (seer.Is(CustomRoles.NSerialKiller) && (target.Is(CustomRoles.NSerialKiller))) color = Main.roleColors[CustomRoles.NSerialKiller];
+        if (seer.Is(CustomRoles.Pyromaniac) && target.Is(CustomRoles.Pyromaniac)) color = Main.roleColors[CustomRoles.Pyromaniac];
+        if (seer.Is(CustomRoles.Necromancer) && target.Is(CustomRoles.Necromancer)) color = Main.roleColors[CustomRoles.Necromancer];
         if (seer.Is(CustomRoles.Werewolf) && (target.Is(CustomRoles.Werewolf))) color = Main.roleColors[CustomRoles.Werewolf];
+        if (seer.Is(CustomRoles.Huntsman) && target.Is(CustomRoles.Huntsman)) color = Main.roleColors[CustomRoles.Huntsman];
         if (seer.Is(CustomRoles.NWitch) && (target.Is(CustomRoles.NWitch))) color = Main.roleColors[CustomRoles.NWitch];
         if (seer.Is(CustomRoles.Shroud) && (target.Is(CustomRoles.Shroud))) color = Main.roleColors[CustomRoles.Shroud];
         if (seer.Is(CustomRoles.Jinx) && (target.Is(CustomRoles.Jinx))) color = Main.roleColors[CustomRoles.Jinx];
@@ -90,43 +121,58 @@ public static class NameColorManager
         if (seer.Is(CustomRoles.Infectious) && target.Is(CustomRoles.Infected)) color = Main.roleColors[CustomRoles.Infected];
         if (seer.Is(CustomRoles.Infected) && target.Is(CustomRoles.Infected) && Infectious.TargetKnowOtherTarget.GetBool()) color = Main.roleColors[CustomRoles.Infectious];
 
+        // Pyromaniac
+        if (seer.Is(CustomRoles.Pyromaniac) && Pyromaniac.DousedList.Contains(target.PlayerId)) color = "#BA4A00";
         // Necroview
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoleTypes.Impostor) && target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Madmate) && target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Admired) && target.Data.IsDead) color = Main.roleColors[CustomRoles.Bait];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Parasite) && target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Crewpostor) && target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Convict) && target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Refugee) && target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Rascal) && target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoleTypes.Crewmate) && target.Data.IsDead) color = Main.roleColors[CustomRoles.Bait];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoleTypes.Neutral) && target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Charmed) && target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Infected) && target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Contagious) && target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Egoist) && target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Recruit) && target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Necroview) && target.Is(CustomRoles.Soulless) && target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Necroview) && target.GetCustomRole().IsCoven() && target.Data.IsDead) color = Main.roleColors[CustomRoles.CovenLeader];
- 
-        // Visionary
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoleTypes.Impostor) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Madmate) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Admired) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.Bait];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Parasite) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Crewpostor) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Convict) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Refugee) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Rascal) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.Impostor];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoleTypes.Crewmate) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.Bait];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoleTypes.Neutral) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Charmed) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Infected) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Contagious) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Egoist) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Recruit) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
-        if (seer.Is(CustomRoles.Visionary) && target.Is(CustomRoles.Soulless) && !target.Data.IsDead) color = Main.roleColors[CustomRoles.SwordsMan];
+        if (seer.Is(CustomRoles.Necroview) && seer.IsAlive())
+        {
+            if (target.Data.IsDead && !target.IsAlive())
+            {
+                if (target.Is(CustomRoleTypes.Impostor)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Madmate)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Admired)) color = Main.roleColors[CustomRoles.Bait];
+                if (target.Is(CustomRoles.Parasite)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Crewpostor)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Convict)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Refugee)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Rascal)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoleTypes.Crewmate)) color = Main.roleColors[CustomRoles.Bait];
+                if (target.Is(CustomRoleTypes.Neutral)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Charmed)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Infected)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Contagious)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Egoist)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Recruit)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Soulless)) color = Main.roleColors[CustomRoles.SwordsMan];
+            }
+        }
 
+        // Visionary
+        if (seer.Is(CustomRoles.Visionary) && seer.IsAlive())
+        {
+            if (target.IsAlive() && !target.Data.IsDead)
+            {
+                if (target.Is(CustomRoleTypes.Impostor)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Madmate)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Admired)) color = Main.roleColors[CustomRoles.Bait];
+                if (target.Is(CustomRoles.Parasite)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Crewpostor)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Convict)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Refugee)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoles.Rascal)) color = Main.roleColors[CustomRoles.Impostor];
+                if (target.Is(CustomRoleTypes.Crewmate)) color = Main.roleColors[CustomRoles.Bait];
+                if (target.Is(CustomRoleTypes.Neutral)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Charmed)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Infected)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Contagious)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Egoist)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Recruit)) color = Main.roleColors[CustomRoles.SwordsMan];
+                if (target.Is(CustomRoles.Soulless)) color = Main.roleColors[CustomRoles.SwordsMan];
+            }
+        }
+
+        // Cyber
+        if (target.Is(CustomRoles.Cyber) && Options.CyberKnown.GetBool()) color = Main.roleColors[CustomRoles.Cyber];
 
         // Rogue
         if (seer.Is(CustomRoles.Rogue) && target.Is(CustomRoles.Rogue) && Options.RogueKnowEachOther.GetBool()) color = Main.roleColors[CustomRoles.Rogue];
@@ -176,9 +222,14 @@ public static class NameColorManager
             || (target.Is(CustomRoles.Gravestone) && Main.PlayerStates[target.Data.PlayerId].IsDead)
             || (target.Is(CustomRoles.Mayor) && Options.MayorRevealWhenDoneTasks.GetBool() && target.GetPlayerTaskState().IsTaskFinished)
             || (seer.Is(CustomRoleTypes.Crewmate) && target.Is(CustomRoles.Marshall) && target.GetPlayerTaskState().IsTaskFinished)
-         //   || Mare.KnowTargetRoleColor(target, isMeeting)
             || EvilDiviner.IsShowTargetRole(seer, target)
-            || PotionMaster.IsShowTargetRole(seer, target);
+            || PotionMaster.IsShowTargetRole(seer, target)
+         //   || Mare.KnowTargetRoleColor(target, isMeeting)
+            || (target.Is(CustomRoles.NiceMini) && Mini.EveryoneCanKnowMini.GetBool())
+            || (target.Is(CustomRoles.EvilMini) && Mini.EveryoneCanKnowMini.GetBool())
+            || (target.Is(CustomRoles.President) && seer.Is(CustomRoles.Madmate) && President.MadmatesSeePresident.GetBool() && President.CheckPresidentReveal[target.PlayerId] == true)
+            || (target.Is(CustomRoles.President) && seer.Is(CustomRoleTypes.Neutral) && President.NeutralsSeePresident.GetBool() && President.CheckPresidentReveal[target.PlayerId] == true)
+            || (target.Is(CustomRoles.President) && (seer.Is(CustomRoleTypes.Impostor) || seer.Is(CustomRoles.Crewpostor)) && President.ImpsSeePresident.GetBool() && President.CheckPresidentReveal[target.PlayerId] == true);
     }
     public static bool TryGetData(PlayerControl seer, PlayerControl target, out string colorCode)
     {

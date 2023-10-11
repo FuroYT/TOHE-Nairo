@@ -5,6 +5,7 @@ using System.Linq;
 using TOHE.Roles.Impostor;
 using TOHE.Roles.Crewmate;
 using TOHE.Roles.Neutral;
+using TOHE.Roles.Double;
 
 namespace TOHE;
 
@@ -79,21 +80,24 @@ class ExileControllerWrapUpPatch
                     DecidedWinner = true;
                 }
             }
-            if (role == CustomRoles.Jester && AmongUsClient.Instance.AmHost)
-            {
-                CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Jester);
-                CustomWinnerHolder.WinnerIds.Add(exiled.PlayerId);
-                foreach (var executioner in Executioner.playerIdList)
+            if (Options.MeetingsNeededForJesterWin.GetInt() <= Main.MeetingsPassed)
+            {           
+                if (role == CustomRoles.Jester && AmongUsClient.Instance.AmHost)
                 {
-                    var GetValue = Executioner.Target.TryGetValue(executioner, out var targetId);
-                    if (GetValue && exiled.PlayerId == targetId)
+                    CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Jester);
+                    CustomWinnerHolder.WinnerIds.Add(exiled.PlayerId);
+                    foreach (var executioner in Executioner.playerIdList)
                     {
-                        CustomWinnerHolder.AdditionalWinnerTeams.Add(AdditionalWinners.Executioner);
-                        CustomWinnerHolder.WinnerIds.Add(executioner);
+                        var GetValue = Executioner.Target.TryGetValue(executioner, out var targetId);
+                        if (GetValue && exiled.PlayerId == targetId)
+                        {
+                            CustomWinnerHolder.AdditionalWinnerTeams.Add(AdditionalWinners.Executioner);
+                            CustomWinnerHolder.WinnerIds.Add(executioner);
+                        }
                     }
+                    DecidedWinner = true;
                 }
-                DecidedWinner = true;
-            }
+            }            
             Executioner.CheckExileTarget(exiled, DecidedWinner);
 
             if (role == CustomRoles.Terrorist) Utils.CheckTerroristWin(exiled);
@@ -122,6 +126,24 @@ class ExileControllerWrapUpPatch
                     Swapper.VoteTwo.Clear();
                     Main.SwapSend = false;
                 }
+            }
+        }
+
+        foreach (var pc in Main.AllAlivePlayerControls)
+        {
+            if (pc.Is(CustomRoles.EvilMini) && Mini.Age != 18)
+            {
+                Main.AllPlayerKillCooldown[pc.PlayerId] = Mini.MinorCD.GetFloat() + 2f;
+                Main.EvilMiniKillcooldown[pc.PlayerId] = Mini.MinorCD.GetFloat() + 2f;
+                Main.EvilMiniKillcooldownf = Mini.MinorCD.GetFloat();
+                pc.MarkDirtySettings();
+                pc.SetKillCooldown();
+            }
+            else if (pc.Is(CustomRoles.EvilMini) && Mini.Age == 18)
+            {
+                Main.AllPlayerKillCooldown[pc.PlayerId] = Mini.MajorCD.GetFloat();
+                pc.MarkDirtySettings();
+                pc.SetKillCooldown();
             }
         }
         
@@ -168,22 +190,30 @@ class ExileControllerWrapUpPatch
                 CustomRoles.Scientist or
                 CustomRoles.Lighter or
                 CustomRoles.Pitfall or
+                CustomRoles.Bastion or
                 CustomRoles.ScientistTOHE or
                 CustomRoles.Tracefinder or
                 CustomRoles.Doctor or
-                CustomRoles.Bomber
+                CustomRoles.Alchemist or
+                CustomRoles.Bomber or
+                CustomRoles.Undertaker
                 ) pc.RpcResetAbilityCooldown();
 
 
             if (Infectious.IsEnable)
             {
-                Infectious.MurderInfectedPlayers(pc);
+                if (pc.Is(CustomRoles.Infectious) && !pc.IsAlive())
+                {
+                    Infectious.MurderInfectedPlayers();
+                }
             }
 
             if (Shroud.IsEnable)
             {
                 Shroud.MurderShroudedPlayers(pc);
             }
+
+            Main.MeetingsPassed++;
 
             pc.RpcRemovePet();
 

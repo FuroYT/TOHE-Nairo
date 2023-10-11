@@ -24,7 +24,7 @@ public class Main : BasePlugin
     // == プログラム設定 / Program Config ==
     public const string OriginalForkId = "OriginalTOH";
 
-    public static readonly string ModName = "TOH-RE";
+    public static readonly string ModName = "TOHE";
     public static readonly string ForkId = "TOHE";
     public static readonly string ModColor = "#ffc0cb";
     public static readonly bool AllowPublicRoom = true;
@@ -36,26 +36,22 @@ public class Main : BasePlugin
     public static readonly string MainMenuText = " ";
 
     public const string PluginGuid = "com.karped1em.townofhostedited";
-    public const string PluginVersion = "3.0.0";
-    public const string PluginDisplayVersion = "3.0.0";
-    public const string PluginEditVersion = "1.0.2";
+    public const string PluginVersion = "1.0.0";
+    public const string PluginDisplayVersion = "1.0.0";
     public static readonly string SupportedVersionAU = "2023.7.11";
     public const bool Canary = false;
 
-    public static readonly string[] nairoUrls = new string[] { "https://www.twitch.tv/arcade_nairo", "https://discord.gg/wD2e2t8MjN" };
-    public static readonly bool[] nairoVisible = new bool[] { true, true };
-
     public static readonly bool ShowGitHubButton = true;
-    public static readonly string GitHubInviteUrl = "https://github.com/Loonie-Toons/TownOfHost-ReEdited";
+    public static readonly string GitHubInviteUrl = "https://github.com/0xDrMoe/TownofHost-Enhanced";
 
     public static readonly bool ShowDiscordButton = true;
-    public static readonly string DiscordInviteUrl = "https://dsc.gg/tohe";
+    public static readonly string DiscordInviteUrl = "https://discord.gg/tohe";
 
     public static readonly bool ShowWebsiteButton = true;
     public static readonly string WebsiteInviteUrl = "https://tohre.dev";
 
-//    public static readonly bool ShowPatreonButton = true;
-//    public static readonly string PatreonInviteUrl = "https://www.patreon.com/TOHRE";
+    public static readonly bool ShowPatreonButton = true;
+    public static readonly string PatreonInviteUrl = "https://www.patreon.com/TOHRE";
 
     public Harmony Harmony { get; } = new Harmony(PluginGuid);
     public static Version version = Version.Parse(PluginVersion);
@@ -71,8 +67,6 @@ public class Main : BasePlugin
     public static ConfigEntry<string> HideColor { get; private set; }
     public static ConfigEntry<int> MessageWait { get; private set; }
     public static ConfigEntry<bool> UnlockFPS { get; private set; }
-    public static ConfigEntry<bool> StreamerMode { get; private set; }
-    public static ConfigEntry<bool> oldMainMenuBg { get; private set; }
     public static ConfigEntry<bool> ShowFPS { get; private set; }
     public static ConfigEntry<bool> EnableGM { get; private set; }
     public static ConfigEntry<bool> AutoStart { get; private set; }
@@ -107,7 +101,7 @@ public class Main : BasePlugin
     public static Dictionary<byte, Color32> PlayerColors = new();
     public static Dictionary<byte, PlayerState.DeathReason> AfterMeetingDeathPlayers = new();
     public static Dictionary<CustomRoles, string> roleColors;
-    public static bool IsFixedCooldown => CustomRoles.Vampire.IsEnable() || CustomRoles.Poisoner.IsEnable();
+    public static bool IsFixedCooldown => CustomRoles.Vampire.IsEnable() || CustomRoles.Poisoner.IsEnable() || CustomRoles.Vampiress.IsEnable();
     public static float RefixCooldownDelay = 0f;
     public static GameData.PlayerInfo LastVotedPlayerInfo;
     public static string LastVotedPlayer;
@@ -122,6 +116,9 @@ public class Main : BasePlugin
     public static List<PlayerControl> LoversPlayers = new();
     public static bool isLoversDead = true;
     public static Dictionary<byte, float> AllPlayerKillCooldown = new();
+    public static Dictionary<byte, float> EvilMiniKillcooldown = new();
+    public static Dictionary<byte, long> NiceMiniTime = new(); 
+    public static float EvilMiniKillcooldownf = new();
     public static Dictionary<byte, Vent> LastEnteredVent = new();
     public static Dictionary<byte, Vector2> LastEnteredVentLocation = new();
     public static Dictionary<byte, Vector2> TimeMasterBackTrack = new();
@@ -132,9 +129,11 @@ public class Main : BasePlugin
     //public static Dictionary<byte, long> FlashbangInProtect = new();
     public static List<byte> CyberStarDead = new();
     public static List<byte> CyberDead = new();
+    public static List<int> BombedVents = new();
     public static List<byte> WorkaholicAlive = new();
     public static List<byte> BurstBodies = new();
     public static List<byte> BaitAlive = new();
+    public static List<byte> TasklessCrewmate = new();
     public static List<byte> BoobyTrapBody = new();
     public static List<byte> BoobyTrapKiller = new();
     //public static List<byte> KilledDiseased = new();
@@ -163,7 +162,6 @@ public class Main : BasePlugin
     public static Dictionary<byte, PlayerControl> CursedPlayers = new();
     public static Dictionary<byte, bool> isCurseAndKill = new();
     public static Dictionary<byte, int> MafiaRevenged = new();
-    public static Dictionary<byte, int> NecromancerRevenged = new();
     public static Dictionary<byte, int> RetributionistRevenged = new();
     public static Dictionary<byte, int> GuesserGuessed = new();
     public static Dictionary<byte, int> CapitalismAddTask = new();
@@ -177,6 +175,7 @@ public class Main : BasePlugin
     public static Dictionary<byte, long> RevolutionistStart = new();
     public static Dictionary<byte, long> RevolutionistLastTime = new();
     public static Dictionary<byte, int> RevolutionistCountdown = new();
+    public static Dictionary<byte, byte> BloodlustList = new();
     public static Dictionary<byte, byte> SpeedBoostTarget = new();
     public static Dictionary<byte, int> MayorUsedButtonCount = new();
     public static Dictionary<byte, int> ParaUsedButtonCount = new();
@@ -185,6 +184,7 @@ public class Main : BasePlugin
     public static Dictionary<byte, float> VeteranNumOfUsed = new();
     public static Dictionary<byte, long> GrenadierBlinding = new();
     public static Dictionary<byte, long> MadGrenadierBlinding = new();
+    public static float BastionNumberOfAbilityUses = 0;
     public static Dictionary<byte, float> GrenadierNumOfUsed = new();
     public static Dictionary<byte, long> Lighter = new();
     public static Dictionary<byte, float> LighterNumOfUsed = new();
@@ -215,6 +215,7 @@ public class Main : BasePlugin
     public static byte ShieldPlayer = byte.MaxValue;
     public static int MadmateNum = 0;
     public static int BardCreations = 0;
+    public static int MeetingsPassed = 0;
     public static Dictionary<byte, byte> Provoked = new();
     public static Dictionary<byte, float> DovesOfNeaceNumOfUsed = new();
     public static bool SwapSend;
@@ -253,8 +254,6 @@ public class Main : BasePlugin
         DebugKeyInput = Config.Bind("Authentication", "Debug Key", "");
         AutoStart = Config.Bind("Client Options", "AutoStart", false);
         UnlockFPS = Config.Bind("Client Options", "UnlockFPS", false);
-        StreamerMode = Config.Bind("Client Options", "StreamerMode", false);
-        oldMainMenuBg = Config.Bind("Client Options", "oldMainMenuBg", false);
         ShowFPS = Config.Bind("Client Options", "ShowFPS", false);
         EnableGM = Config.Bind("Client Options", "EnableGM", false);
         AutoStart = Config.Bind("Client Options", "AutoStart", false);
@@ -325,6 +324,10 @@ public class Main : BasePlugin
                 {CustomRoles.Engineer, "#8cffff"},
                 {CustomRoles.Scientist, "#8cffff"},
                 {CustomRoles.GuardianAngel, "#ffffff"},
+                // Special impostor roles
+                {CustomRoles.EvilMini, "#FF1919" },
+                // Probability roles
+                {CustomRoles.Mini, "#dddddd" },
                 // Vanilla Remakes
                 {CustomRoles.CrewmateTOHE, "#8cffff"},
                 {CustomRoles.EngineerTOHE, "#FF6A00"},
@@ -332,11 +335,13 @@ public class Main : BasePlugin
                 {CustomRoles.GuardianAngelTOHE, "#77e6d1"},
                 //特殊クルー役職
                 {CustomRoles.Luckey, "#b8d7a3" },
+                {CustomRoles.President, "#00ffac"},
                 {CustomRoles.Needy, "#a4dffe"},
                 {CustomRoles.SabotageMaster, "#3333ff"},
                 {CustomRoles.Snitch, "#b8fb4f"},
                 {CustomRoles.Marshall, "#5573aa"},
                 {CustomRoles.Mayor, "#204d42"},
+                {CustomRoles.Bastion, "#696969"},
                 {CustomRoles.Paranoia, "#c993f5"},
                 {CustomRoles.Psychic, "#6F698C"},
                 {CustomRoles.Cleanser,"#98FF98" },
@@ -373,7 +378,9 @@ public class Main : BasePlugin
                 {CustomRoles.Tracker, "#3CB371"},
                 {CustomRoles.Merchant, "#D27D2D"},
                 {CustomRoles.Retributionist, "#228B22"},
+                {CustomRoles.Alchemist, "#a058bf"},
                 {CustomRoles.Deputy, "#df9026"},
+                {CustomRoles.Investigator, "#007FFF"},
                 {CustomRoles.Jailer,"#aa900d"},
                 {CustomRoles.Guardian, "#2E8B57"},
                 {CustomRoles.Addict, "#008000"},
@@ -389,9 +396,12 @@ public class Main : BasePlugin
                 {CustomRoles.Monitor, "#7223DA"},
                 {CustomRoles.Swapper, "#66E666"},
                 {CustomRoles.ChiefOfPolice,"#f8cd46"},
+                {CustomRoles.NiceMini, "#edc240" },
                 //第三陣営役職
                 {CustomRoles.Arsonist, "#ff6633"},
+                {CustomRoles.Pyromaniac, "#ff2400"},
                 {CustomRoles.Agitater, "#F4A460"},
+                {CustomRoles.Bandit, "#8B008B"},
                 {CustomRoles.PlagueBearer,"#e5f6b4"},
                 {CustomRoles.Pestilence,"#343136"},
                 {CustomRoles.Jester, "#ec62a5"},
@@ -415,10 +425,11 @@ public class Main : BasePlugin
                 {CustomRoles.Collector, "#9d8892"},
                 {CustomRoles.Provocateur, "#74ba43"},
                 {CustomRoles.Sunnyboy, "#ff9902"},
-                {CustomRoles.Poisoner, "#663399"},
+                {CustomRoles.Poisoner, "#478800"},
+                {CustomRoles.Huntsman, "#ad8739"},
                 {CustomRoles.CovenLeader, "#663399"},
                 {CustomRoles.Ritualist, "#663399"},
-                {CustomRoles.Necromancer, "#663399"},
+                {CustomRoles.Necromancer, "#9C87AB"},
                 {CustomRoles.Banshee, "#663399"},
                 {CustomRoles.NWitch, "#BF5FFF"},
                 {CustomRoles.Totocalcio, "#ff9409"},
@@ -426,9 +437,9 @@ public class Main : BasePlugin
                 {CustomRoles.VengefulRomantic, "#8B0000"},
                 {CustomRoles.RuthlessRomantic, "#D2691E"},
                 {CustomRoles.Succubus, "#cf6acd"},
-                {CustomRoles.HexMaster, "#663399"},
+                {CustomRoles.HexMaster, "#ff00ff"},
                 {CustomRoles.Occultist, "#375d91"},
-                {CustomRoles.Wraith, "#663399"},
+                {CustomRoles.Wraith, "#4B0082"},
                 {CustomRoles.Shade, "#000930"},
                 {CustomRoles.NSerialKiller, "#233fcc"},
                 {CustomRoles.BloodKnight, "#630000"},
@@ -441,7 +452,7 @@ public class Main : BasePlugin
                 {CustomRoles.Farseer, "#BA55D3"},
                 {CustomRoles.Pursuer, "#617218"},
                 {CustomRoles.Phantom, "#662962"},
-                {CustomRoles.Jinx, "#663399"},
+                {CustomRoles.Jinx, "#ed2f91"},
                 {CustomRoles.Maverick, "#781717"},
                 {CustomRoles.CursedSoul, "#531269"},
                 {CustomRoles.PotionMaster, "#663399"},
@@ -449,7 +460,7 @@ public class Main : BasePlugin
                 {CustomRoles.Pickpocket, "#47008B"},
                 {CustomRoles.Traitor, "#BA2E05"},
                 {CustomRoles.Vulture, "#556B2F"},
-                {CustomRoles.Medusa, "#663399"},
+                {CustomRoles.Medusa, "#9900CC"},
                 {CustomRoles.Spiritcaller, "#003366"},
                 {CustomRoles.EvilSpirit, "#003366"},
                 {CustomRoles.Convict, "#ff1919"},
@@ -461,6 +472,8 @@ public class Main : BasePlugin
                 {CustomRoles.Werewolf, "#191970"},
                 {CustomRoles.Seeker, "#ffaa00"},
                 {CustomRoles.SoulCollector, "#A675A1"},
+                {CustomRoles.Imitator, "#B3D94C"},
+                {CustomRoles.Doppelganger,"#f6f4a3" },
             
                 // GM
                 {CustomRoles.GM, "#ff5b70"},
@@ -517,18 +530,21 @@ public class Main : BasePlugin
                 {CustomRoles.Antidote,"#FF9876"},
                 {CustomRoles.VoidBallot,"#FF3399"},
                 {CustomRoles.Aware,"#4B0082"},
+                {CustomRoles.Stubborn,"#FF5733"},
                 {CustomRoles.Fragile,"#D3D3D3"},
                 {CustomRoles.Burst, "#B619B9"},
-
+                {CustomRoles.Bloodlust, "#691a2e"},
+                {CustomRoles.Overclocked, "#C4AD2C"},
                 {CustomRoles.Swift, "#ff1919"},
                 {CustomRoles.Mare, "#ff1919"},
                 {CustomRoles.Ghoul, "#B22222"},
                 {CustomRoles.Sleuth, "#803333" },
                 {CustomRoles.Clumsy, "#ff1919"},
+                {CustomRoles.Circumvent, "#ff1919"},
                 {CustomRoles.Nimble, "#FFFAA6"},
                 {CustomRoles.Repairman, "#3333ff"},
 
-          //      {CustomRoles.Cyber, "#ee4a55" },
+                {CustomRoles.Cyber, "#F46F4E" },
 
              //   {CustomRoles.QuickFix, "#3333ff"},
 
@@ -600,6 +616,7 @@ public enum CustomRoles
     ShapeshifterTOHE,
     //Impostor
     BountyHunter,
+    Undertaker,
     FireWorks,
     Mafia,
     Godfather,
@@ -611,6 +628,7 @@ public enum CustomRoles
     Zombie,
     Sniper,
     Vampire,
+    Vampiress,
     Witch,
     Warlock,
     Assassin,
@@ -620,6 +638,7 @@ public enum CustomRoles
     Escapee,
     Inhibitor,
     Puppeteer,
+    Mastermind,
     TimeThief,
     EvilTracker,
     AntiAdminer,
@@ -663,6 +682,8 @@ public enum CustomRoles
     Ludopath,
     Chronomancer,
     Pitfall,
+    EvilMini,
+    Blackmailer,
     // Flashbang,
     //Crewmate(Vanilla)
     Engineer,
@@ -675,11 +696,13 @@ public enum CustomRoles
     ScientistTOHE,
     //Crewmate
     Luckey,
+    President,
     Needy,
     SuperStar,
     CyberStar,
     Cleanser,
     Mayor,
+    Bastion,
     Paranoia,
     Psychic,
     SabotageMaster,
@@ -717,7 +740,9 @@ public enum CustomRoles
     Tracker,
     Merchant,
     Retributionist,
+    Alchemist,
     Deputy,
+    Investigator,
     Guardian,
     Addict,
     Tracefinder,
@@ -733,10 +758,14 @@ public enum CustomRoles
     Monitor,
     Swapper,
     ChiefOfPolice,
+    NiceMini,
 
     //Neutral
     Arsonist,
+    Doppelganger,
+    Pyromaniac,
     Agitater,
+    Bandit,
     Seeker,
     SoulCollector,
     HexMaster,
@@ -796,9 +825,13 @@ public enum CustomRoles
     CovenLeader,
     Ritualist,
     Necromancer,
+    Huntsman,
     Banshee,
     Occultist,
     Shade,
+    Imitator,
+   //two-way camp
+    Mini,
    // Sorcerer,
    // Flux,
 
@@ -863,12 +896,15 @@ public enum CustomRoles
     Ghoul,
     Mare,
     Burst,
+    Bloodlust,
     Sleuth,
     Clumsy,
     Nimble,
+    Circumvent,
     Repairman,
-    instakiller,
-    //  Cyber,
+    Cyber,
+    Stubborn,
+    Overclocked
     // QuickFix
 }
 //WinData
@@ -886,10 +922,10 @@ public enum CustomWinner
     Lovers = CustomRoles.Lovers,
     Executioner = CustomRoles.Executioner,
     Arsonist = CustomRoles.Arsonist,
+    Pyromaniac = CustomRoles.Pyromaniac,
     Agitater = CustomRoles.Agitater,
     Revolutionist = CustomRoles.Revolutionist,
     Jackal = CustomRoles.Jackal,
-    instakiller = CustomRoles.instakiller,
     Sidekick = CustomRoles.Sidekick,
     God = CustomRoles.God,
     Mario = CustomRoles.Mario,
@@ -907,10 +943,13 @@ public enum CustomWinner
     Occultist = CustomRoles.Occultist,
     Succubus = CustomRoles.Succubus,
     Wraith = CustomRoles.Wraith,
+    Bandit = CustomRoles.Bandit,
     Shade = CustomRoles.Shade,
     Pirate = CustomRoles.Pirate,
     SerialKiller = CustomRoles.NSerialKiller,
     Werewolf = CustomRoles.Werewolf,
+    Necromancer = CustomRoles.Necromancer,
+    Huntsman = CustomRoles.Huntsman,
     Witch = CustomRoles.NWitch,
     Juggernaut = CustomRoles.Juggernaut,
     Infectious = CustomRoles.Infectious,
@@ -935,6 +974,8 @@ public enum CustomWinner
     Seeker = CustomRoles.Seeker,
     SoulCollector = CustomRoles.SoulCollector,
     RuthlessRomantic = CustomRoles.RuthlessRomantic,
+    NiceMini = CustomRoles.Mini,
+    Doppelganger = CustomRoles.Doppelganger,
 }
 public enum AdditionalWinners
 {
@@ -957,6 +998,7 @@ public enum AdditionalWinners
     Phantom = CustomRoles.Phantom,
     Maverick = CustomRoles.Maverick,
     Shaman = CustomRoles.Shaman,
+ //   NiceMini = CustomRoles.NiceMini,
  //   Baker = CustomRoles.Baker,
 }
 public enum SuffixModes

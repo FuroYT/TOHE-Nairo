@@ -7,7 +7,7 @@
     <Description>Town Of Host Edited</Description>
     <Authors>KARPED1EM</Authors>
     <langVersion>latest</langVersion>
-	<AmongUs>C:/Users/matth/Documents/TOHE-DEV</AmongUs>
+	<AmongUs>C:\Userspopul\Documents\Among Us v2023.7.12</AmongUs>
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -23,22 +23,18 @@
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Costura.Fody" Version="5.7.0">
+    <PackageReference Include="Costura.Fody" Version="5.8.0-alpha0098">
       <IncludeAssets>runtime; compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="csv" Version="2.0.93" />
-    <PackageReference Include="GitInfo" Version="2.3.0">
+    <PackageReference Include="GitInfo" Version="3.3.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
   <Target Name="Copy" AfterTargets="Build" Condition="'$(AmongUs)' != ''">
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(AmongUs)/BepInEx/plugins/" />
-  </Target>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="&quot;C:\Users\matth\Documents\TOHE-DEV\Among Us.exe&quot;" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(AmongUs)/BepInEx/plugins/" Condition="'$(Configuration)' == 'Debug'" />
   </Target>
 </Project>

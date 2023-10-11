@@ -173,6 +173,11 @@ public static class CopyCat
                 case CustomRoles.Reverie:
                     Reverie.NowCooldown.Remove(pc.PlayerId);
                     break;
+                case CustomRoles.President:
+                    President.CheckPresidentReveal.Remove(pc.PlayerId);
+                    President.EndLimit.Remove(pc.PlayerId);
+                    President.RevealLimit.Remove(pc.PlayerId);
+                    break;
             }
             pc.RpcSetCustomRole(CustomRoles.CopyCat);
             SetKillCooldown(player);
@@ -187,14 +192,18 @@ public static class CopyCat
             CustomRoles.Lighter or
             CustomRoles.DovesOfNeace or
             CustomRoles.Veteran or
+            CustomRoles.Bastion or
             CustomRoles.Addict or
             CustomRoles.Chameleon or
+            CustomRoles.Alchemist or
             //bcoz of arrows
             CustomRoles.Mortician or
             CustomRoles.Bloodhound or
             CustomRoles.Tracefinder or
             CustomRoles.Spiritualist or
-            CustomRoles.Tracker;
+            CustomRoles.Tracker or
+            // Other
+            CustomRoles.Investigator;
     }
 
     public static bool OnCheckMurder(PlayerControl pc, PlayerControl tpc)
@@ -209,7 +218,7 @@ public static class CopyCat
         if (CopyCrewVar.GetBool())
         {
             if (role == CustomRoles.Eraser) role = CustomRoles.Cleanser;
-            if (role == CustomRoles.Mafia || role == CustomRoles.Necromancer) role = CustomRoles.Retributionist;
+            if (role == CustomRoles.Mafia) role = CustomRoles.Retributionist;
             if (role == CustomRoles.Visionary) role = CustomRoles.Oracle;
             if (role == CustomRoles.Workaholic) role = CustomRoles.Snitch;
             if (role == CustomRoles.Sunnyboy) role = CustomRoles.Doctor;
@@ -333,6 +342,12 @@ public static class CopyCat
                 case CustomRoles.Reverie:
                 Reverie.NowCooldown.TryAdd(pc.PlayerId, Reverie.DefaultKillCooldown.GetFloat());
                 break;
+                case CustomRoles.President:
+                    President.CheckPresidentReveal.Add(pc.PlayerId,false);
+                    President.EndLimit.Add(pc.PlayerId, President.PresidentAbilityUses.GetInt());
+                    President.RevealLimit.Add(pc.PlayerId, 1);
+                    break;
+
             }
 
             pc.RpcSetCustomRole(role);

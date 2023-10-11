@@ -11,17 +11,10 @@ namespace TOHE.Patches
     {
         private static string lobbycode = "";
         private static string region = "";
-        public static Activity oldActivity = null;
-        public static void Prefix([HarmonyArgument(0)] Activity curActivity)
+        public static void Prefix([HarmonyArgument(0)] Activity activity)
         {
-            Activity activity = curActivity;
-            if (activity == null)
-            {
-                activity = oldActivity;
-            }
             var details = $"TOHE v{Main.PluginDisplayVersion}";
             activity.Details = details;
-            oldActivity = activity;
 
             try
             {
@@ -41,21 +34,14 @@ namespace TOHE.Patches
 
                         if (lobbycode != "" && region != "")
                         {
-                            if (!Main.StreamerMode.Value)
-                            {
-                                details = $"TOHE - {lobbycode} ({region})";
-                            }
-                            else
-                            {
-                                details = $"TOHE - Code Hidden (Streamer Mode)";
-                            }
+                            details = $"TOHE - {lobbycode} ({region})";
                         }
 
                         activity.Details = details;
                     }
                     else
                     {
-                        details = $"TOHE - Code Hidden (Streamer Mode)";
+                        details = $"TOHE v{Main.PluginDisplayVersion}";
                     }
                 }
             }
