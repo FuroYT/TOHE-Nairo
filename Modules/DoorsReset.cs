@@ -38,7 +38,7 @@ public static class DoorsReset
         }
     }
     /// <summary>Open all doors on the map</summary>
-    private static void OpenAllDoors()
+    public static void OpenAllDoors()
     {
         foreach (var door in ShipStatus.Instance.AllDoors)
         {
@@ -47,7 +47,7 @@ public static class DoorsReset
         DoorsSystem.IsDirty = true;
     }
     /// <summary>Close all doors on the map</summary>
-    private static void CloseAllDoors()
+    public static void CloseAllDoors()
     {
         foreach (var door in ShipStatus.Instance.AllDoors)
         {
@@ -56,7 +56,7 @@ public static class DoorsReset
         DoorsSystem.IsDirty = true;
     }
     /// <summary>Randomly opens and closes all doors on the map</summary>
-    private static void OpenOrCloseAllDoorsRandomly()
+    public static void OpenOrCloseAllDoorsRandomly()
     {
         foreach (var door in ShipStatus.Instance.AllDoors)
         {
@@ -69,7 +69,7 @@ public static class DoorsReset
     /// <summary>Sets the open/close status of the door. Do nothing for doors that cannot be closed by sabotage</summary>
     /// <param name="door">Target door</param>
     /// <param name="isOpen">true for open, false for close</param>
-    private static void SetDoorOpenState(PlainDoor door, bool isOpen)
+    public static void SetDoorOpenState(PlainDoor door, bool isOpen)
     {
         if (IsValidDoor(door))
         {
@@ -78,7 +78,7 @@ public static class DoorsReset
     }
     /// <summary>Determine if the door is subject to reset</summary>
     /// <returns>true if it is subject to reset</returns>
-    private static bool IsValidDoor(PlainDoor door)
+    public static bool IsValidDoor(PlainDoor door)
     {
         // Airship lounge toilets and Polus decontamination room doors are not closed
         if (door.Room is SystemTypes.Lounge or SystemTypes.Decontamination)

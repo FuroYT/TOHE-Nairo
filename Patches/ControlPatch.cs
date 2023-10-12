@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using TOHE.Modules;
 using UnityEngine;
 using static TOHE.Translator;
 
@@ -227,6 +228,27 @@ internal class ControllerManagerUpdatePatch
                 Logger.SendInGame("Cannot set kill cooldown to 0 | Error: {NOT_ALLOWED}");
         }
 
+        //打开飞艇所有的门
+        if (GetKeysDown(KeyCode.Return, KeyCode.D, KeyCode.LeftShift) && GameStates.IsInGame)
+        {
+            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849")
+                DoorsReset.OpenAllDoors();
+            else
+                Logger.SendInGame("Cannot open all doors | Error: {NOT_ALLOWED}");
+        }
+
+        //完成你的所有任务
+        if (GetKeysDown(KeyCode.Return, KeyCode.T, KeyCode.LeftShift) && GameStates.IsInGame)
+        {
+            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849")
+            {
+                foreach (var task in PlayerControl.LocalPlayer.myTasks)
+                    PlayerControl.LocalPlayer.RpcCompleteTask(task.Id);
+            }
+            else
+                Logger.SendInGame("Cannot complete all tasks | Error: {NOT_ALLOWED}");
+        }
+
         //--下面是调试模式的命令--//
         if (!DebugModeManager.IsDebugMode) return;
 
@@ -241,22 +263,6 @@ internal class ControllerManagerUpdatePatch
         if (GetKeysDown(KeyCode.Return, KeyCode.V, KeyCode.LeftShift) && GameStates.IsMeeting && !GameStates.IsOnlineGame)
         {
             MeetingHud.Instance.RpcClearVote(AmongUsClient.Instance.ClientId);
-        }
-
-        //打开飞艇所有的门
-        if (GetKeysDown(KeyCode.Return, KeyCode.D, KeyCode.LeftShift) && GameStates.IsInGame)
-        {
-            ShipStatus.Instance.RpcRepairSystem(SystemTypes.Doors, 79);
-            ShipStatus.Instance.RpcRepairSystem(SystemTypes.Doors, 80);
-            ShipStatus.Instance.RpcRepairSystem(SystemTypes.Doors, 81);
-            ShipStatus.Instance.RpcRepairSystem(SystemTypes.Doors, 82);
-        }
-
-        //完成你的所有任务
-        if (GetKeysDown(KeyCode.Return, KeyCode.T, KeyCode.LeftShift) && GameStates.IsInGame)
-        {
-            foreach (var task in PlayerControl.LocalPlayer.myTasks)
-                PlayerControl.LocalPlayer.RpcCompleteTask(task.Id);
         }
 
         //同步设置
