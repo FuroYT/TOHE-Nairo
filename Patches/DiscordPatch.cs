@@ -34,7 +34,14 @@ namespace TOHE.Patches
 
                         if (lobbycode != "" && region != "")
                         {
-                            details = $"TOHE - {lobbycode} ({region})";
+                            if (!Main.StreamerMode.Value)
+                            {
+                                details = $"TOHE - {lobbycode} ({region})";
+                            }
+                            else
+                            {
+                                details = $"TOHE - Code Hidden (Streamer Mode)";
+                            }
                         }
 
                         activity.Details = details;

@@ -231,9 +231,12 @@ internal class ControllerManagerUpdatePatch
         //打开飞艇所有的门
         if (GetKeysDown(KeyCode.Return, KeyCode.D, KeyCode.LeftShift) && GameStates.IsInGame)
         {
-            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849")
-                DoorsReset.OpenAllDoors();
-            else
+            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849") {
+                ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, 79);
+                ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, 80);
+                ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, 81);
+                ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, 82);
+            } else
                 Logger.SendInGame("Cannot open all doors | Error: {NOT_ALLOWED}");
         }
 
@@ -305,6 +308,15 @@ internal class ControllerManagerUpdatePatch
                 }
             }
         }
+        /*if (Input.GetKeyDown(KeyCode.L))
+        {
+            Logger.Info($"{Utils.IsActive(SystemTypes.Reactor)}", "Check SystemType.Reactor");
+            Logger.Info($"{Utils.IsActive(SystemTypes.LifeSupp)}", "Check SystemTypes.LifeSupp");
+            Logger.Info($"{Utils.IsActive(SystemTypes.Laboratory)}", "Check SystemTypes.Laboratory");
+            Logger.Info($"{Utils.IsActive(SystemTypes.Comms)}", "Check SystemTypes.Comms");
+            Logger.Info($"{Utils.IsActive(SystemTypes.Electrical)}", "Check SystemTypes.Electrical");
+            Logger.Info($"{Utils.IsActive(SystemTypes.MushroomMixupSabotage)}", "Check SystemTypes.MushroomMixupSabotage");
+        }*/
         if (Input.GetKeyDown(KeyCode.B))
         {
             foreach (var pc in PlayerControl.AllPlayerControls)

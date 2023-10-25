@@ -3,6 +3,8 @@
 /bin
 /obj
 /.editorconfig
+/.vscode
+/.idea
 
 FodyWeavers.xsd
 TOHE.sln

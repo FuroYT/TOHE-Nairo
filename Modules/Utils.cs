@@ -134,19 +134,23 @@ public static class Utils
             Polus        = 2
             Dleks        = 3 (Not used)
             The Airship  = 4
-            Fungle       = 5?
+            The Fungle       = 5
         */
+
+        //Logger.Info($"{type}", "SystemTypes");
+
         switch (type)
         {
             case SystemTypes.Electrical:
                 {
+                    if (mapId == 5) return false; // if The Fungle return false
                     var SwitchSystem = ShipStatus.Instance.Systems[type].Cast<SwitchSystem>();
                     return SwitchSystem != null && SwitchSystem.IsActive;
                 }
             case SystemTypes.Reactor:
                 {
-                    if (mapId == 2) return false;
-                    else if (mapId == 4)
+                    if (mapId == 2) return false; // if Polus return false
+                    else if (mapId is 4) // Only Airhip
                     {
                         var HeliSabotageSystem = ShipStatus.Instance.Systems[type].Cast<HeliSabotageSystem>();
                         return HeliSabotageSystem != null && HeliSabotageSystem.IsActive;
@@ -159,19 +163,19 @@ public static class Utils
                 }
             case SystemTypes.Laboratory:
                 {
-                    if (mapId != 2) return false;
+                    if (mapId != 2) return false; // Only Polus
                     var ReactorSystemType = ShipStatus.Instance.Systems[type].Cast<ReactorSystemType>();
                     return ReactorSystemType != null && ReactorSystemType.IsActive;
                 }
             case SystemTypes.LifeSupp:
                 {
-                    if (mapId is 2 or 4) return false;
+                    if (mapId is 2 or 4 or 5) return false; // Only Skeld & Mira HQ
                     var LifeSuppSystemType = ShipStatus.Instance.Systems[type].Cast<LifeSuppSystemType>();
                     return LifeSuppSystemType != null && LifeSuppSystemType.IsActive;
                 }
             case SystemTypes.Comms:
                 {
-                    if (mapId == 1)
+                    if (mapId is 1 or 5) // Only Mira HQ & The Fungle
                     {
                         var HqHudSystemType = ShipStatus.Instance.Systems[type].Cast<HqHudSystemType>();
                         return HqHudSystemType != null && HqHudSystemType.IsActive;
@@ -181,6 +185,12 @@ public static class Utils
                         var HudOverrideSystemType = ShipStatus.Instance.Systems[type].Cast<HudOverrideSystemType>();
                         return HudOverrideSystemType != null && HudOverrideSystemType.IsActive;
                     }
+                }
+            case SystemTypes.MushroomMixupSabotage:
+                {
+                    if (mapId != 5) return false; // Only The Fungle
+                    var MushroomMixupSabotageSystem = ShipStatus.Instance.Systems[type].Cast<MushroomMixupSabotageSystem>();
+                    return MushroomMixupSabotageSystem != null && MushroomMixupSabotageSystem.IsActive;
                 }
             default:
                 return false;
@@ -1726,7 +1736,7 @@ public static class Utils
         {
             var actualName = "";
             if (!GameStates.IsLobby) return;
-            if (player.AmOwner && player.FriendCode != "trebleneck#7849")
+            if (player.AmOwner)
             {
                 if (!player.IsModClient()) return;
                 {
@@ -1855,6 +1865,19 @@ public static class Utils
 
                     var coolSwag = "";
                     coolSwag = GradientColorText("1badec", "193ac9", $"{GetString("HostText")} ♥ | {actualName}");
+
+                    name = prefix + "<size=1.5>" + modtag + "</size>" + coolSwag;
+                }
+
+                if (player.FriendCode == "formaltan#3606") //nairo
+                {
+                    var prefix = "";
+
+                    if (!name.Contains('\r') && player.FriendCode.GetDevUser().HasTag())
+                        prefix = player.FriendCode.GetDevUser().GetTag();
+
+                    var coolSwag = "";
+                    coolSwag = GradientColorText("6F1374", "7915E0", $"{GetString("HostText")} ♥ | {actualName}");
 
                     name = prefix + "<size=1.5>" + modtag + "</size>" + coolSwag;
                 }

@@ -160,11 +160,11 @@ class CheckMurderPatch
                 {
                     if (Options.FragileKillerLunge.GetBool())
                     {
-                        killer.RpcMurderPlayer(target);
+                        killer.RpcMurderPlayer(target, true);
                     }
                     else
                     {
-                        target.RpcMurderPlayer(target);
+                        target.RpcMurderPlayer(target, true);
                     }
                     Main.PlayerStates[target.PlayerId].deathReason = PlayerState.DeathReason.Shattered;
                     target.SetRealKiller(target);
@@ -691,7 +691,7 @@ class CheckMurderPatch
                     AmongUsClient.Instance.FinishRpcImmediately(writer);
 
                     target.NetTransform.SnapTo(location);
-                    killer.MurderPlayer(target);
+                    killer.MurderPlayer(target, MurderResultFlags.DecisionByHost);
 
                     if (target.Is(CustomRoles.Avanger))
                     {
@@ -1253,10 +1253,10 @@ class MurderPlayerPatch
 {
     public static void Prefix(PlayerControl __instance, [HarmonyArgument(0)] PlayerControl target)
     {
-        Logger.Info($"{__instance.GetNameWithRole()} => {target.GetNameWithRole()}{(target.protectedByGuardian ? "(Protected)" : "")}", "MurderPlayer");
+        Logger.Info($"{__instance.GetNameWithRole()} => {target.GetNameWithRole()}{(target.protectedByGuardianThisRound ? "(Protected)" : "")}", "MurderPlayer");
 
         if (RandomSpawn.CustomNetworkTransformPatch.NumOfTP.TryGetValue(__instance.PlayerId, out var num) && num > 2) RandomSpawn.CustomNetworkTransformPatch.NumOfTP[__instance.PlayerId] = 3;
-        if (!target.protectedByGuardian && !Doppelganger.DoppelVictim.ContainsKey(target.PlayerId))
+        if (!target.protectedByGuardianThisRound && !Doppelganger.DoppelVictim.ContainsKey(target.PlayerId))
             Camouflage.RpcSetSkin(target, ForceRevert: true);
     }
     public static void Postfix(PlayerControl __instance, [HarmonyArgument(0)] PlayerControl target)
@@ -3637,17 +3637,6 @@ class SetNamePatch
 {
     public static void Postfix(PlayerControl __instance, [HarmonyArgument(0)] string name)
     {
-    }
-}
-[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.Die))]
-public static class PlayerControlDiePatch
-{
-    //https://github.com/Hyz-sui/TownOfHost-H
-    public static void Postfix(PlayerControl __instance)
-    {
-        if (!AmongUsClient.Instance.AmHost) return;
-
-        __instance.RpcRemovePet();
     }
 }
 [HarmonyPatch(typeof(GameData), nameof(GameData.CompleteTask))]
