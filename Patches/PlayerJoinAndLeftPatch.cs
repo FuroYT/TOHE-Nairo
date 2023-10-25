@@ -10,6 +10,7 @@ using TOHE.Modules;
 using TOHE.Roles.Crewmate;
 using TOHE.Roles.Neutral;
 using static TOHE.Translator;
+using static UnityEngine.GraphicsBuffer;
 
 namespace TOHE;
 
@@ -249,13 +250,25 @@ class CreatePlayerPatch
         }
 
         _ = new LateTask(() => { if (client.Character == null || client == null) return; OptionItem.SyncAllOptions(client.Id); }, 3f, "Sync All Options For New Player");
+        Main.GuessNumber[client.Character.PlayerId] = new List<int> { -1, 7 };
 
         _ = new LateTask(() =>
         {
+            //Logger.Warn($"{client.Character.CurrentOutfit.ColorId},{client.Character.CurrentOutfit.HatId}, {client.Character.CurrentOutfit.SkinId}, {client.Character.CurrentOutfit.VisorId}, {client.Character.CurrentOutfit.PetId}", "SKIN LOGGED");
+
             if (client.Character == null) return;
             if (Main.OverrideWelcomeMsg != "") Utils.SendMessage(Main.OverrideWelcomeMsg, client.Character.PlayerId);
             else TemplateManager.SendTemplate("welcome", client.Character.PlayerId, true);
         }, 3f, "Welcome Message");
+
+        _ = new LateTask(() =>
+        {
+            if (Options.GradientTagsOpt.GetBool())
+            {
+                if (client.Character == null) return;
+                Utils.SendMessage(GetString("Warning.GradientTags"), client.Character.PlayerId);
+            }
+        }, 3.3f, "GradientWarning");
 
         if (Main.OverrideWelcomeMsg == "" && Main.PlayerStates.Count != 0 && Main.clientIdList.Contains(client.Id))
         {
@@ -299,7 +312,7 @@ class CreatePlayerPatch
                     if (!AmongUsClient.Instance.IsGameStarted && client.Character != null)
                     {
                         Main.isChatCommand = true;
-                   //     Utils.SendMessage($"{GetString("Message.YTPlanNotice")} {PlayerControl.LocalPlayer.FriendCode.GetDevUser().UpName}", client.Character.PlayerId);
+                        //     Utils.SendMessage($"{GetString("Message.YTPlanNotice")} {PlayerControl.LocalPlayer.FriendCode.GetDevUser().UpName}", client.Character.PlayerId);
                     }
                 }, 3.3f, "DisplayUpWarnning");
             }

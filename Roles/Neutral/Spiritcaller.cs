@@ -87,34 +87,31 @@ namespace TOHE.Roles.Neutral
         {
             if (!target.GetCustomRole().IsAbleToBeSidekicked() && !target.GetCustomRole().IsImpostor())
             {
-            if (SpiritLimit < 1) return;
+                if (SpiritLimit < 1) return;
 
-            SpiritLimit--;
-            SendRPC();
+                SpiritLimit--;
+                SendRPC();
 
-            target.RpcSetCustomRole(CustomRoles.EvilSpirit);
+                target.RpcSetCustomRole(CustomRoles.EvilSpirit);
 
-            var writer = CustomRpcSender.Create("SpiritCallerSendMessage", SendOption.None);
-            writer.StartMessage(target.GetClientId());
-            writer.StartRpc(target.NetId, (byte)RpcCalls.SetName)
-                .Write(GetString("SpiritcallerNoticeTitle"))
-                .EndRpc();
-            writer.StartRpc(target.NetId, (byte)RpcCalls.SendChat)
-                .Write(GetString("SpiritcallerNoticeMessage"))
-                .EndRpc();
-            writer.StartRpc(target.NetId, (byte)RpcCalls.SetName)
-                .Write(target.Data.PlayerName)
-                .EndRpc();
-            writer.EndMessage();
-            writer.SendMessage();
+                var writer = CustomRpcSender.Create("SpiritCallerSendMessage", SendOption.None);
+                writer.StartMessage(target.GetClientId());
+                writer.StartRpc(target.NetId, (byte)RpcCalls.SetName)
+                    .Write(GetString("SpiritcallerNoticeTitle"))
+                    .EndRpc();
+                writer.StartRpc(target.NetId, (byte)RpcCalls.SendChat)
+                    .Write(GetString("SpiritcallerNoticeMessage"))
+                    .EndRpc();
+                writer.StartRpc(target.NetId, (byte)RpcCalls.SetName)
+                    .Write(target.Data.PlayerName)
+                    .EndRpc();
+                writer.EndMessage();
+                writer.SendMessage();
             }
         }
 
         public static void OnFixedUpdate(PlayerControl pc)
         {
-            if (!IsEnable) return;
-            if (!GameStates.IsInTask) return;
-
             if (pc.Is(CustomRoles.Spiritcaller))
             {
                 if (ProtectTimeStamp < Utils.GetTimeStamp() && ProtectTimeStamp != 0)

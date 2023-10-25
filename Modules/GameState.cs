@@ -7,6 +7,7 @@ using TOHE.Modules;
 using TOHE.Roles.Crewmate;
 using TOHE.Roles.Neutral;
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
 namespace TOHE;
 
@@ -151,7 +152,7 @@ public class PlayerState
             SubRoles.Remove(CustomRoles.Loyal);
             SubRoles.Remove(CustomRoles.Loyal);
             SubRoles.Remove(CustomRoles.Admired);
-        } 
+        }
         if (role == CustomRoles.Infected)
         {
             countTypes = CountTypes.Infectious;
@@ -364,8 +365,6 @@ public class TaskState
                 else player.Notify(string.Format(Translator.GetString("SpeedBoosterTaskDone"), Main.AllPlayerSpeed[player.PlayerId].ToString("0.0#####")));
             }
 
-
-
             /*
             //叛徒修理搞破坏
             if (player.IsAlive()
@@ -412,8 +411,8 @@ public class TaskState
                     var tar1 = AllAlivePlayer[rd.Next(0, AllAlivePlayer.Count)];
                     AllAlivePlayer.Remove(tar1);
                     var tar2 = AllAlivePlayer[rd.Next(0, AllAlivePlayer.Count)];
-                    var posTar1 = tar1.transform.position;
-                    tar1.RpcTeleport(tar2.transform.position);
+                    var posTar1 = tar1.GetTruePosition();
+                    tar1.RpcTeleport(tar2.GetTruePosition());
                     tar2.RpcTeleport(posTar1);
                     tar1.RPCPlayCustomSound("Teleport");
                     tar2.RPCPlayCustomSound("Teleport");
@@ -435,9 +434,9 @@ public class TaskState
 
                 }
             }
-            if (player.Is(CustomRoles.Bloodlust) && player.IsAlive() && !Main.BloodlustList.ContainsKey(player.PlayerId))
+            if (player.Is(CustomRoles.Bloodlust) && player.IsAlive() && !Alchemist.BloodlustList.ContainsKey(player.PlayerId))
             {
-                Main.BloodlustList[player.PlayerId] = player.PlayerId;
+                Alchemist.BloodlustList[player.PlayerId] = player.PlayerId;
                 player.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Bloodlust), string.Format(Translator.GetString("BloodlustAdded"))));
             }
 
@@ -483,10 +482,10 @@ public class TaskState
             {
                 Oracle.CheckLimit[player.PlayerId] += Oracle.OracleAbilityUseGainWithEachTaskCompleted.GetFloat();
             }
-    /*        if (player.Is(CustomRoles.Cleanser) && player.IsAlive())
-            {
-                Cleanser.CleanserUses[player.PlayerId] += Cleanser.AbilityUseGainWithEachTaskCompleted.GetInt();
-            } */
+            /*        if (player.Is(CustomRoles.Cleanser) && player.IsAlive())
+                    {
+                        Cleanser.CleanserUses[player.PlayerId] += Cleanser.AbilityUseGainWithEachTaskCompleted.GetInt();
+                    } */
             if (player.Is(CustomRoles.SabotageMaster) && player.IsAlive())
             {
                 SabotageMaster.UsedSkillCount[player.PlayerId] -= SabotageMaster.SMAbilityUseGainWithEachTaskCompleted.GetFloat();
@@ -504,13 +503,19 @@ public class TaskState
             {
                 Chameleon.UseLimit[player.PlayerId] += Chameleon.ChameleonAbilityUseGainWithEachTaskCompleted.GetFloat();
             }
+            if (player.Is(CustomRoles.Spy) && player.IsAlive())
+            {
+                Spy.UseLimit[player.PlayerId] += Spy.SpyAbilityUseGainWithEachTaskCompleted.GetFloat();
+                Spy.SendAbilityRPC(player.PlayerId);
+
+            }
 
             if (player.Is(CustomRoles.Ghoul) && (CompletedTasksCount + 1) >= AllTasksCount && player.IsAlive())
-            _ = new LateTask(() =>
-            {
-                player.RpcMurderPlayerV3(player);
-                Main.PlayerStates[player.PlayerId].deathReason = PlayerState.DeathReason.Suicide;
-            }, 0.2f, "Ghoul Suicide");
+                _ = new LateTask(() =>
+                {
+                    player.RpcMurderPlayerV3(player);
+                    Main.PlayerStates[player.PlayerId].deathReason = PlayerState.DeathReason.Suicide;
+                }, 0.2f, "Ghoul Suicide");
             if (player.Is(CustomRoles.Ghoul) && (CompletedTasksCount + 1) >= AllTasksCount && !player.IsAlive())
             {
                 foreach (var pc in Main.AllPlayerControls)
@@ -520,7 +525,7 @@ public class TaskState
                         if (Main.KillGhoul.Contains(pc.PlayerId) && player.PlayerId != pc.PlayerId && pc.IsAlive())
                         {
                             player.RpcMurderPlayerV3(pc);
-                            Main.PlayerStates[pc.PlayerId].deathReason = PlayerState.DeathReason.Kill;                        
+                            Main.PlayerStates[pc.PlayerId].deathReason = PlayerState.DeathReason.Kill;
                         }
                     }
 
@@ -562,35 +567,53 @@ public class TaskState
             //船鬼要抽奖啦
             if (player.Is(CustomRoles.Crewpostor))
             {
-
+                if (Main.CrewpostorTasksDone.ContainsKey(player.PlayerId)) Main.CrewpostorTasksDone[player.PlayerId]++;
+                else Main.CrewpostorTasksDone[player.PlayerId] = 0;
+                RPC.CrewpostorTasksSendRPC(player.PlayerId, Main.CrewpostorTasksDone[player.PlayerId]);
                 List<PlayerControl> list = Main.AllAlivePlayerControls.Where(x => x.PlayerId != player.PlayerId && (Options.CrewpostorCanKillAllies.GetBool() || !x.GetCustomRole().IsImpostorTeam())).ToList();
                 if (list.Count < 1)
                 {
-                    Logger.Info($"船鬼没有可击杀目标", "Crewpostor");
+                    Logger.Info($"No target to kill", "Crewpostor");
+                }
+                else if (Main.CrewpostorTasksDone[player.PlayerId] % Options.CrewpostorKillAfterTask.GetInt() != 0 && Main.CrewpostorTasksDone[player.PlayerId] != 0)
+                {
+                    Logger.Info($"Crewpostor task done but kill skipped, tasks completed {Main.CrewpostorTasksDone[player.PlayerId]}, but it kills after {Options.CrewpostorKillAfterTask.GetInt()} tasks", "Crewpostor");
                 }
                 else
                 {
+
                     {
                         list = list.OrderBy(x => Vector2.Distance(player.transform.position, x.transform.position)).ToList();
-                            var target = list[0];
+                        var target = list[0];
                         if (!target.Is(CustomRoles.Pestilence))
                         {
-                            target.SetRealKiller(player);
-                            target.RpcCheckAndMurder(target);
-                            player.RpcGuardAndKill();
-                            Logger.Info($"船鬼完成任务击杀：{player.GetNameWithRole()} => {target.GetNameWithRole()}", "Crewpostor");
+                            if (!Options.CrewpostorLungeKill.GetBool())
+                            {
+                                target.SetRealKiller(player);
+                                target.RpcCheckAndMurder(target);
+                                player.RpcGuardAndKill();
+                                Logger.Info("No lunge mode kill", "Crewpostor");
+                            }
+                            else
+                            {
+                                target.SetRealKiller(player);
+                                player.RpcMurderPlayerV3(target);
+                                player.RpcGuardAndKill();
+                                Logger.Info("lunge mode kill", "Crewpostor");
+
+                            }
+                            Logger.Info($"Crewpostor completed task to kill：{player.GetNameWithRole()} => {target.GetNameWithRole()}", "Crewpostor");
                         }
                         if (target.Is(CustomRoles.Pestilence))
                         {
-                            target.SetRealKiller(player);
+                            player.SetRealKiller(target);
                             target.RpcMurderPlayerV3(player);
                             player.RpcGuardAndKill();
-                            Logger.Info($"船鬼完成任务击杀：{target.GetNameWithRole()} => {player.GetNameWithRole()}", "Pestilence Reflect");
+                            Logger.Info($"Crewpostor tried to kill pestilence (reflected back)：{target.GetNameWithRole()} => {player.GetNameWithRole()}", "Pestilence Reflect");
                         }
                     }
                 }
-            } 
-
+            }
         }
 
         //クリアしてたらカウントしない

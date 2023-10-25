@@ -1,7 +1,6 @@
 using Hazel;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using static TOHE.Options;
 
@@ -70,25 +69,24 @@ public static class Tracefinder
         else
             LocateArrow.RemoveAllTarget(playerId);
     }
-    public static void OnReportDeadBody(PlayerControl pc, GameData.PlayerInfo target)
+    public static void OnReportDeadBody()
     {
         foreach (var apc in playerIdList)
         {
             LocateArrow.RemoveAllTarget(apc);
             SendRPC(apc, false);
         }
-
     }
 
     public static void OnPlayerDead(PlayerControl target)
     {
-        Vector2 pos = target.transform.position;
+        var pos = target.GetTruePosition();
         float minDis = float.MaxValue;
         string minName = "";
         foreach (var pc in Main.AllAlivePlayerControls)
         {
             if (pc.PlayerId == target.PlayerId) continue;
-            var dis = Vector2.Distance(pc.transform.position, pos);
+            var dis = Vector2.Distance(pc.GetTruePosition(), pos);
             if (dis < minDis && dis < 1.5f)
             {
                 minDis = dis;
@@ -102,12 +100,15 @@ public static class Tracefinder
         delay = Math.Max(delay, 0.15f);
 
         _ = new LateTask(() => {
-            foreach (var pc in playerIdList)
+            if (!GameStates.IsMeeting && GameStates.IsInTask)
             {
-                var player = Utils.GetPlayerById(pc);
-                if (player == null || !player.IsAlive()) continue;
-                LocateArrow.Add(pc, target.transform.position);
-                SendRPC(pc, true, target.transform.position);
+                foreach (var pc in playerIdList)
+                {
+                    var player = Utils.GetPlayerById(pc);
+                    if (player == null || !player.IsAlive()) continue;
+                    LocateArrow.Add(pc, target.transform.position);
+                    SendRPC(pc, true, target.transform.position);
+                }
             }
         }, delay);
 

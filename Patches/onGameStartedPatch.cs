@@ -14,6 +14,7 @@ using TOHE.Roles.Neutral;
 using static TOHE.Modules.CustomRoleSelector;
 using static TOHE.Translator;
 using TOHE.Roles.Double;
+using TOHE.Modules.ChatManager;
 
 namespace TOHE;
 
@@ -51,7 +52,6 @@ internal class ChangeRoleSettings
             Main.RevolutionistCountdown = new();
             Main.TimeMasterBackTrack = new();
             Main.TimeMasterNum = new();
-            Main.FarseerTimer = new();
             Main.CursedPlayers = new();
             Main.MafiaRevenged = new();
             Main.RetributionistRevenged = new();
@@ -72,7 +72,6 @@ internal class ChangeRoleSettings
             Main.KillerOfBoobyTrapBody = new();
             Main.CleanerBodies = new();
             Main.BurstBodies = new();
-            Main.BloodlustList = new();
             Main.MedusaBodies = new();
             Main.InfectedBodies = new();
             Main.VirusNotify = new();
@@ -114,10 +113,12 @@ internal class ChangeRoleSettings
             Main.MeetingsPassed = 0;
             Main.DovesOfNeaceNumOfUsed = new();
             Main.GodfatherTarget = new();
-            Main.CultivatorKillMax = new();
+            Main.BerserkerKillMax = new();
             Main.AwareInteracted = new();
+            Main.CrewpostorTasksDone = new();
             Main.ShamanTarget = byte.MaxValue;
             Main.ShamanTargetChoosen = false;
+            ChatManager.ResetHistory();
 
             ReportDeadBodyPatch.CanReport = new();
 
@@ -200,7 +201,7 @@ internal class ChangeRoleSettings
             Mastermind.Init();
             Witch.Init();
             HexMaster.Init();
-            Occultist.Init();
+            //Occultist.Init();
             SabotageMaster.Init();
             Repairman.Init();
             Executioner.Init();
@@ -260,10 +261,8 @@ internal class ChangeRoleSettings
             Mediumshiper.Init();
             Swooper.Init();
             Wraith.Init();
-            Shade.Init();
             SoulCollector.Init();
             BloodKnight.Init();
-            Banshee.Init();
             Totocalcio.Init();
             Romantic.Init();
             VengefulRomantic.Init();
@@ -280,7 +279,6 @@ internal class ChangeRoleSettings
             Infectious.Init();
             Monarch.Init();
             Virus.Init();
-            CovenLeader.Init();
             Bloodhound.Init();
             Tracker.Init();
             Merchant.Init();
@@ -321,7 +319,9 @@ internal class ChangeRoleSettings
             ChiefOfPolice.Init();
             Mini.Init();
             Blackmailer.Init();
-            
+            Spy.Init();
+            FFF.Init();
+
             CustomWinnerHolder.Reset();
             AntiBlackout.Reset();
             NameNotifyManager.Reset();
@@ -492,8 +492,8 @@ internal class SelectRolesPatch
                     case CustomRoles.BountyHunter:
                         BountyHunter.Add(pc.PlayerId);
                         break;
-                    case CustomRoles.Cultivator:
-                        Main.CultivatorKillMax[pc.PlayerId] = 0;
+                    case CustomRoles.Berserker:
+                        Main.BerserkerKillMax[pc.PlayerId] = 0;
                         break;
                     case CustomRoles.Reverie:
                         Reverie.Add(pc.PlayerId);
@@ -507,9 +507,9 @@ internal class SelectRolesPatch
                     case CustomRoles.HexMaster:
                         HexMaster.Add(pc.PlayerId);
                         break;
-                    case CustomRoles.Occultist:
-                        Occultist.Add(pc.PlayerId);
-                        break;
+                    //case CustomRoles.Occultist:
+                    //    Occultist.Add(pc.PlayerId);
+                    //    break;
                     case CustomRoles.Crusader:
                         Crusader.Add(pc.PlayerId);
                         Crusader.CrusaderLimit[pc.PlayerId] = Crusader.SkillLimitOpt.GetInt();
@@ -735,7 +735,6 @@ internal class SelectRolesPatch
                         Judge.Add(pc.PlayerId);
                         break;
                     case CustomRoles.President:
-                        President.CheckPresidentReveal[pc.PlayerId] = false;
                         President.Add(pc.PlayerId);
                         break;
                     case CustomRoles.Councillor:
@@ -765,9 +764,6 @@ internal class SelectRolesPatch
                     case CustomRoles.Wraith:
                         Wraith.Add(pc.PlayerId);
                         break;
-                    case CustomRoles.Shade:
-                        Shade.Add(pc.PlayerId);
-                        break;
                     case CustomRoles.Lighter:
                         Main.LighterNumOfUsed.Add(pc.PlayerId, Options.LighterSkillMaxOfUseage.GetInt());
                         break;
@@ -782,9 +778,6 @@ internal class SelectRolesPatch
                         break;
                     case CustomRoles.BloodKnight:
                         BloodKnight.Add(pc.PlayerId);
-                        break;
-                    case CustomRoles.Banshee:
-                        Banshee.Add(pc.PlayerId);
                         break;
                     case CustomRoles.Totocalcio:
                         Totocalcio.Add(pc.PlayerId);
@@ -858,9 +851,6 @@ internal class SelectRolesPatch
                     case CustomRoles.NWitch:
                         NWitch.Add(pc.PlayerId);
                         break;
-                    case CustomRoles.CovenLeader:
-                        CovenLeader.Add(pc.PlayerId);
-                        break;
                     case CustomRoles.Shroud:
                         Shroud.Add(pc.PlayerId);
                         break;
@@ -924,6 +914,15 @@ internal class SelectRolesPatch
                     case CustomRoles.Blackmailer:
                         Blackmailer.Add(pc.PlayerId);
                         break;
+                    case CustomRoles.Spy:
+                        Spy.Add(pc.PlayerId);
+                        break;
+                    case CustomRoles.Crewpostor:
+                        Main.CrewpostorTasksDone[pc.PlayerId] = 0;
+                        break;
+                    case CustomRoles.FFF:
+                        FFF.Add(pc.PlayerId);
+                        break;
                 }
                 foreach (var subRole in pc.GetCustomSubRoles())
                 {
@@ -974,7 +973,7 @@ internal class SelectRolesPatch
             }
 
             // ResetCamが必要なプレイヤーのリストにクラス化が済んでいない役職のプレイヤーを追加
-            Main.ResetCamPlayerList.AddRange(Main.AllPlayerControls.Where(p => p.GetCustomRole() is CustomRoles.Arsonist or CustomRoles.Ritualist or CustomRoles.Revolutionist or CustomRoles.Sidekick or CustomRoles.Shaman).Select(p => p.PlayerId));
+            Main.ResetCamPlayerList.AddRange(Main.AllPlayerControls.Where(p => p.GetCustomRole() is CustomRoles.Arsonist or CustomRoles.Revolutionist or CustomRoles.Sidekick or CustomRoles.Shaman or CustomRoles.Vigilante).Select(p => p.PlayerId));
             Utils.CountAlivePlayers(true);
             Utils.SyncAllSettings();
             SetColorPatch.IsAntiGlitchDisabled = false;

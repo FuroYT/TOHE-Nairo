@@ -100,33 +100,29 @@ public static class BountyHunter
     {
         ChangeTimer.Clear();
     }
-    public static void FixedUpdate(PlayerControl player)
+    public static void OnFixedUpdate(PlayerControl player)
     {
-        if (!IsEnable) return;
-        if (!player.Is(CustomRoles.BountyHunter)) return;
+        if (!ChangeTimer.ContainsKey(player.PlayerId)) return;
 
-        if (GameStates.IsInTask && ChangeTimer.ContainsKey(player.PlayerId))
+        if (!player.IsAlive())
+            ChangeTimer.Remove(player.PlayerId);
+        else
         {
-            if (!player.IsAlive())
-                ChangeTimer.Remove(player.PlayerId);
-            else
+            var targetId = GetTarget(player);
+            if (ChangeTimer[player.PlayerId] >= TargetChangeTime)//時間経過でターゲットをリセットする処理
             {
-                var targetId = GetTarget(player);
-                if (ChangeTimer[player.PlayerId] >= TargetChangeTime)//時間経過でターゲットをリセットする処理
-                {
-                    ResetTarget(player);//ターゲットの選びなおし
-                    Utils.NotifyRoles(SpecifySeer: player);
-                }
-                if (ChangeTimer[player.PlayerId] >= 0)
-                    ChangeTimer[player.PlayerId] += Time.fixedDeltaTime;
+                ResetTarget(player);//ターゲットの選びなおし
+                Utils.NotifyRoles(SpecifySeer: player);
+            }
+            if (ChangeTimer[player.PlayerId] >= 0)
+                ChangeTimer[player.PlayerId] += Time.fixedDeltaTime;
 
-                //BountyHunterのターゲット更新
-                if (Main.PlayerStates[targetId].IsDead)
-                {
-                    ResetTarget(player);
-                    Logger.Info($"{player.GetNameWithRole()}のターゲットが無効だったため、ターゲットを更新しました", "BountyHunter");
-                    Utils.NotifyRoles(SpecifySeer: player);
-                }
+            //BountyHunterのターゲット更新
+            if (Main.PlayerStates[targetId].IsDead)
+            {
+                ResetTarget(player);
+                Logger.Info($"{player.GetNameWithRole()}のターゲットが無効だったため、ターゲットを更新しました", "BountyHunter");
+                Utils.NotifyRoles(SpecifySeer: player);
             }
         }
     }
@@ -157,10 +153,10 @@ public static class BountyHunter
 
         var cTargets = new List<PlayerControl>(Main.AllAlivePlayerControls.Where(pc => !pc.Is(CustomRoleTypes.Impostor)));
 
-        if (cTargets.Count() >= 2 && Targets.TryGetValue(player.PlayerId, out var nowTarget))
+        if (cTargets.Count >= 2 && Targets.TryGetValue(player.PlayerId, out var nowTarget))
             cTargets.RemoveAll(x => x.PlayerId == nowTarget); //前回のターゲットは除外
 
-        if (cTargets.Count <= 0)
+        if (!cTargets.Any())
         {
             Logger.Warn("ターゲットの指定に失敗しました:ターゲット候補が存在しません", "BountyHunter");
             return 0xff;
@@ -199,6 +195,7 @@ public static class BountyHunter
     }
     public static string GetTargetArrow(PlayerControl seer, PlayerControl target = null)
     {
+        if (seer == null) return "";
         if (!seer.Is(CustomRoles.BountyHunter)) return "";
         if (target != null && seer.PlayerId != target.PlayerId) return "";
         if (!ShowTargetArrow || GameStates.IsMeeting) return "";

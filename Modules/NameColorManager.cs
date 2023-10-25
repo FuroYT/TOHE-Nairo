@@ -40,7 +40,7 @@ public static class NameColorManager
         if (seer.Is(CustomRoles.Madmate) && target.Is(CustomRoles.Madmate) && Options.MadmateKnowWhosMadmate.GetBool()) color = Main.roleColors[CustomRoles.Madmate];
         if (seer.Is(CustomRoles.Gangster) && target.Is(CustomRoles.Madmate)) color = Main.roleColors[CustomRoles.Madmate];
 
-        //СС��Ҳ�ܿɰ�))))
+        // Mini
         if (!seer.GetCustomRole().IsImpostorTeam() && (target.Is(CustomRoles.NiceMini) || target.Is(CustomRoles.EvilMini))) color = Main.roleColors[CustomRoles.Mini];
 
         // Succubus
@@ -77,9 +77,6 @@ public static class NameColorManager
         if (seer.Is(CustomRoles.Mastermind) && Mastermind.ManipulateDelays.ContainsKey(target.PlayerId)) color = "#00ffa5";
         if (seer.Is(CustomRoles.Mastermind) && Mastermind.ManipulatedPlayers.ContainsKey(target.PlayerId)) color = Main.roleColors[CustomRoles.Arsonist];
 
-
-    //    if (seer.GetCustomRole().IsCoven() && (target.GetCustomRole().IsCoven())) color = Main.roleColors[CustomRoles.CovenLeader];
-
         // Amnesiac
         if (seer.Is(CustomRoles.Jackal) && (target.Is(CustomRoles.Jackal))) color = Main.roleColors[CustomRoles.Jackal];
         if (seer.Is(CustomRoles.Juggernaut) && (target.Is(CustomRoles.Juggernaut))) color = Main.roleColors[CustomRoles.Juggernaut];
@@ -92,9 +89,8 @@ public static class NameColorManager
         if (seer.Is(CustomRoles.Shroud) && (target.Is(CustomRoles.Shroud))) color = Main.roleColors[CustomRoles.Shroud];
         if (seer.Is(CustomRoles.Jinx) && (target.Is(CustomRoles.Jinx))) color = Main.roleColors[CustomRoles.Jinx];
         if (seer.Is(CustomRoles.Wraith) && (target.Is(CustomRoles.Wraith))) color = Main.roleColors[CustomRoles.Wraith];
-        if (seer.Is(CustomRoles.Shade) && (target.Is(CustomRoles.Shade))) color = Main.roleColors[CustomRoles.Shade];
         if (seer.Is(CustomRoles.HexMaster) && (target.Is(CustomRoles.HexMaster))) color = Main.roleColors[CustomRoles.HexMaster];
-        if (seer.Is(CustomRoles.Occultist) && (target.Is(CustomRoles.Occultist))) color = Main.roleColors[CustomRoles.Occultist];
+        //if (seer.Is(CustomRoles.Occultist) && (target.Is(CustomRoles.Occultist))) color = Main.roleColors[CustomRoles.Occultist];
         if (seer.Is(CustomRoles.BloodKnight) && (target.Is(CustomRoles.BloodKnight))) color = Main.roleColors[CustomRoles.BloodKnight];
         if (seer.Is(CustomRoles.Pelican) && (target.Is(CustomRoles.Pelican))) color = Main.roleColors[CustomRoles.Pelican];
         if (seer.Is(CustomRoles.Poisoner) && (target.Is(CustomRoles.Poisoner))) color = Main.roleColors[CustomRoles.Poisoner];
@@ -113,14 +109,13 @@ public static class NameColorManager
         if (seer.Is(CustomRoles.Refugee) && (target.Is(CustomRoleTypes.Impostor))) color = Main.roleColors[CustomRoles.ImpostorTOHE];
         if (seer.Is(CustomRoleTypes.Impostor) && (target.Is(CustomRoles.Refugee))) color = Main.roleColors[CustomRoles.Refugee];
 
-//        if (seer.Is(CustomRoles.Minion) && (target.GetCustomRole().IsCoven())) color = Main.roleColors[CustomRoles.CovenLeader];
-  //      if (seer.GetCustomRole().IsCoven() && (target.Is(CustomRoles.Minion))) color = Main.roleColors[CustomRoles.Minion];
-
         // Infectious
         if (seer.Is(CustomRoles.Infected) && target.Is(CustomRoles.Infectious)) color = Main.roleColors[CustomRoles.Infectious];
         if (seer.Is(CustomRoles.Infectious) && target.Is(CustomRoles.Infected)) color = Main.roleColors[CustomRoles.Infected];
         if (seer.Is(CustomRoles.Infected) && target.Is(CustomRoles.Infected) && Infectious.TargetKnowOtherTarget.GetBool()) color = Main.roleColors[CustomRoles.Infectious];
 
+        //Spy
+        if (seer.Is(CustomRoles.Spy) && Spy.SpyRedNameList.ContainsKey(target.PlayerId)) color = "#BA4A00";
         // Pyromaniac
         if (seer.Is(CustomRoles.Pyromaniac) && Pyromaniac.DousedList.Contains(target.PlayerId)) color = "#BA4A00";
         // Necroview
@@ -190,7 +185,7 @@ public static class NameColorManager
 
         // GLOW SQUID IS 
         // BEST MOB IN MINECRAFT
-        if (target.Is(CustomRoles.Glow) && Utils.IsActive(SystemTypes.Electrical)) color = Main.roleColors[CustomRoles.Glow];
+        //if (target.Is(CustomRoles.Glow) && Utils.IsActive(SystemTypes.Electrical)) color = Main.roleColors[CustomRoles.Glow];
 
 
         if (target.Is(CustomRoles.Mare) && Utils.IsActive(SystemTypes.Electrical) && !isMeeting) color = Main.roleColors[CustomRoles.Mare];

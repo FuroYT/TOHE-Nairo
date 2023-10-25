@@ -24,10 +24,10 @@ public static class CopyCat
         SetupRoleOptions(Id, TabGroup.CrewmateRoles, CustomRoles.CopyCat);
         KillCooldown = FloatOptionItem.Create(Id + 10, "CopyCatCopyCooldown", new(0f, 180f, 1f), 15f, TabGroup.CrewmateRoles, false).SetParent(Options.CustomRoleSpawnChances[CustomRoles.CopyCat])
             .SetValueFormat(OptionFormat.Seconds);
-    //    CanKill = BooleanOptionItem.Create(Id + 11, "CopyCatCanKill", false, TabGroup.CrewmateRoles, false).SetParent(Options.CustomRoleSpawnChances[CustomRoles.CopyCat]);
-        CopyCrewVar = BooleanOptionItem.Create(Id+13, "CopyCrewVar",true,TabGroup.CrewmateRoles,false).SetParent(Options.CustomRoleSpawnChances[CustomRoles.CopyCat]);        
-      /*  MiscopyLimitOpt = IntegerOptionItem.Create(Id + 12, "CopyCatMiscopyLimit", new(0, 14, 1), 2, TabGroup.CrewmateRoles, false).SetParent(CanKill)
-            .SetValueFormat(OptionFormat.Times); */
+        //    CanKill = BooleanOptionItem.Create(Id + 11, "CopyCatCanKill", false, TabGroup.CrewmateRoles, false).SetParent(Options.CustomRoleSpawnChances[CustomRoles.CopyCat]);
+        CopyCrewVar = BooleanOptionItem.Create(Id + 13, "CopyCrewVar", true, TabGroup.CrewmateRoles, false).SetParent(Options.CustomRoleSpawnChances[CustomRoles.CopyCat]);
+        /*  MiscopyLimitOpt = IntegerOptionItem.Create(Id + 12, "CopyCatMiscopyLimit", new(0, 14, 1), 2, TabGroup.CrewmateRoles, false).SetParent(CanKill)
+              .SetValueFormat(OptionFormat.Times); */
     }
 
     public static void Init()
@@ -158,9 +158,9 @@ public static class CopyCat
                 case CustomRoles.Lighter:
                     Main.LighterNumOfUsed.Remove(player);
                     break;
-                case CustomRoles.TimeMaster:
-                    Main.TimeMasterNumOfUsed.Remove(player);
-                    break;
+                //case CustomRoles.TimeMaster:
+                //    Main.TimeMasterNumOfUsed.Remove(player);
+                //    break;
                 case CustomRoles.Judge:
                     Judge.TrialLimit.Remove(player);
                     break;
@@ -169,7 +169,7 @@ public static class CopyCat
                     break;
                 case CustomRoles.Divinator:
                     Divinator.CheckLimit.Remove(pc.PlayerId);
-                break;
+                    break;
                 case CustomRoles.Reverie:
                     Reverie.NowCooldown.Remove(pc.PlayerId);
                     break;
@@ -177,6 +177,15 @@ public static class CopyCat
                     President.CheckPresidentReveal.Remove(pc.PlayerId);
                     President.EndLimit.Remove(pc.PlayerId);
                     President.RevealLimit.Remove(pc.PlayerId);
+                    break;
+                case CustomRoles.Spy:
+                    Spy.UseLimit.Remove(pc.PlayerId);
+                    break;
+                case CustomRoles.SabotageMaster:
+                    SabotageMaster.UsedSkillCount.Remove(pc.PlayerId);
+                    break;
+                case CustomRoles.Admirer:
+                    Admirer.AdmirerLimit.Remove(pc.PlayerId);
                     break;
             }
             pc.RpcSetCustomRole(CustomRoles.CopyCat);
@@ -196,12 +205,14 @@ public static class CopyCat
             CustomRoles.Addict or
             CustomRoles.Chameleon or
             CustomRoles.Alchemist or
+            CustomRoles.TimeMaster or
             //bcoz of arrows
             CustomRoles.Mortician or
             CustomRoles.Bloodhound or
             CustomRoles.Tracefinder or
             CustomRoles.Spiritualist or
             CustomRoles.Tracker or
+            //bcoz of single role
             // Other
             CustomRoles.Investigator;
     }
@@ -217,15 +228,48 @@ public static class CopyCat
         }
         if (CopyCrewVar.GetBool())
         {
-            if (role == CustomRoles.Eraser) role = CustomRoles.Cleanser;
-            if (role == CustomRoles.Mafia) role = CustomRoles.Retributionist;
-            if (role == CustomRoles.Visionary) role = CustomRoles.Oracle;
-            if (role == CustomRoles.Workaholic) role = CustomRoles.Snitch;
-            if (role == CustomRoles.Sunnyboy) role = CustomRoles.Doctor;
-            if (role == CustomRoles.Vindicator || role == CustomRoles.Pickpocket) role = CustomRoles.Mayor;
-            else if (role == CustomRoles.Councillor) role = CustomRoles.Judge;
-            else if (role == CustomRoles.Sans || role == CustomRoles.Juggernaut) role = CustomRoles.Reverie;
-            else if (role == CustomRoles.EvilGuesser || role == CustomRoles.Doomsayer || role == CustomRoles.Ritualist) role = CustomRoles.NiceGuesser;
+            switch (role)
+            {
+                case CustomRoles.Eraser:
+                    role = CustomRoles.Cleanser;
+                    break;
+                case CustomRoles.Mafia:
+                    role = CustomRoles.Retributionist;
+                    break;
+                case CustomRoles.Visionary:
+                    role = CustomRoles.Oracle;
+                    break;
+                case CustomRoles.Workaholic:
+                    role = CustomRoles.Snitch;
+                    break;
+                case CustomRoles.Sunnyboy:
+                    role = CustomRoles.Doctor;
+                    break;
+                case CustomRoles.Vindicator:
+                case CustomRoles.Pickpocket:
+                    role = CustomRoles.Mayor;
+                    break;
+                case CustomRoles.Councillor:
+                    role = CustomRoles.Judge;
+                    break;
+                case CustomRoles.Sans:
+                case CustomRoles.Juggernaut:
+                    role = CustomRoles.Reverie;
+                    break;
+                case CustomRoles.EvilGuesser:
+                case CustomRoles.Doomsayer:
+                    role = CustomRoles.NiceGuesser;
+                    break;
+            }
+            //if (role == CustomRoles.Eraser) role = CustomRoles.Cleanser;
+            //if (role == CustomRoles.Mafia) role = CustomRoles.Retributionist;
+            //if (role == CustomRoles.Visionary) role = CustomRoles.Oracle;
+            //if (role == CustomRoles.Workaholic) role = CustomRoles.Snitch;
+            //if (role == CustomRoles.Sunnyboy) role = CustomRoles.Doctor;
+            //if (role == CustomRoles.Vindicator || role == CustomRoles.Pickpocket) role = CustomRoles.Mayor;
+            //else if (role == CustomRoles.Councillor) role = CustomRoles.Judge;
+            //else if (role == CustomRoles.Sans || role == CustomRoles.Juggernaut) role = CustomRoles.Reverie;
+            //else if (role == CustomRoles.EvilGuesser || role == CustomRoles.Doomsayer) role = CustomRoles.NiceGuesser;
         }
         if (role.IsCrewmate()/* && (!tpc.GetCustomSubRoles().Any(x => x == CustomRoles.Rascal))*/)
         {
@@ -340,14 +384,22 @@ public static class CopyCat
                     Divinator.CheckLimit.TryAdd(pc.PlayerId, 5);
                     break;
                 case CustomRoles.Reverie:
-                Reverie.NowCooldown.TryAdd(pc.PlayerId, Reverie.DefaultKillCooldown.GetFloat());
-                break;
+                    Reverie.NowCooldown.TryAdd(pc.PlayerId, Reverie.DefaultKillCooldown.GetFloat());
+                    break;
                 case CustomRoles.President:
-                    President.CheckPresidentReveal.Add(pc.PlayerId,false);
+                    President.CheckPresidentReveal.Add(pc.PlayerId, false);
                     President.EndLimit.Add(pc.PlayerId, President.PresidentAbilityUses.GetInt());
                     President.RevealLimit.Add(pc.PlayerId, 1);
                     break;
-
+                case CustomRoles.Spy:
+                    Spy.UseLimit.Add(pc.PlayerId, Spy.UseLimitOpt.GetInt());
+                    break;
+                case CustomRoles.SabotageMaster:
+                    SabotageMaster.UsedSkillCount.Add(pc.PlayerId, 0);
+                    break;
+                case CustomRoles.Admirer:
+                    Admirer.AdmirerLimit.Add(pc.PlayerId, Admirer.SkillLimit.GetInt());
+                    break;
             }
 
             pc.RpcSetCustomRole(role);

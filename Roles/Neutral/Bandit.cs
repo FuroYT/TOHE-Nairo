@@ -18,6 +18,7 @@ public static class Bandit
     public static OptionItem CanStealBetrayalAddon;
     public static OptionItem CanStealImpOnlyAddon;
     public static OptionItem CanUseSabotage;
+    public static OptionItem CanVent;
 
     public static Dictionary<byte, int> TotalSteals = new();
     public static Dictionary<byte, Dictionary<byte, CustomRoles>> Targets = new();
@@ -38,6 +39,7 @@ public static class Bandit
         CanStealBetrayalAddon = BooleanOptionItem.Create(Id + 13, "BanditCanStealBetrayalAddon", true, TabGroup.NeutralRoles, false).SetParent(CustomRoleSpawnChances[CustomRoles.Bandit]);
         CanStealImpOnlyAddon = BooleanOptionItem.Create(Id + 14, "BanditCanStealImpOnlyAddon", true, TabGroup.NeutralRoles, false).SetParent(CustomRoleSpawnChances[CustomRoles.Bandit]);
         CanUseSabotage = BooleanOptionItem.Create(Id + 15, "CanUseSabotage", true, TabGroup.NeutralRoles, false).SetParent(CustomRoleSpawnChances[CustomRoles.Bandit]);
+        CanVent = BooleanOptionItem.Create(Id + 16, "CanVent", true, TabGroup.NeutralRoles, false).SetParent(CustomRoleSpawnChances[CustomRoles.Bandit]);
     }
 
     public static void Init()
@@ -92,9 +94,10 @@ public static class Bandit
                 role == CustomRoles.LastImpostor ||
                 role == CustomRoles.Lovers || // Causes issues involving Lovers Suicide
                 (role.IsImpOnlyAddon() && !CanStealImpOnlyAddon.GetBool()) ||
+                (role == CustomRoles.Nimble && CanVent.GetBool()) ||
                 (role.IsBetrayalAddon() && !CanStealBetrayalAddon.GetBool()))
             { 
-                    Logger.Info($"Removed {role} from stealable addons", "Bandit");
+                    Logger.Info($"Removed {role} from list of stealable addons", "Bandit");
                     AllSubRoles.Remove(role);
             }
         }
@@ -124,7 +127,10 @@ public static class Bandit
         if (StealMode.GetValue() == 1)
         {    
             Main.PlayerStates[target.PlayerId].RemoveSubRole((CustomRoles)SelectedAddOn);
+            if (SelectedAddOn == CustomRoles.Aware) Main.AwareInteracted.Remove(target.PlayerId);
             Logger.Info($"Successfully removed {SelectedAddOn} addon from {target.GetNameWithRole()}", "Bandit");
+
+            if (SelectedAddOn == CustomRoles.Aware && !Main.AwareInteracted.ContainsKey(target.PlayerId)) Main.AwareInteracted[target.PlayerId] = new();
             killer.RpcSetCustomRole((CustomRoles)SelectedAddOn);
             Logger.Info($"Successfully Added {SelectedAddOn} addon to {killer.GetNameWithRole()}", "Bandit");
         }
@@ -144,7 +150,6 @@ public static class Bandit
 
     public static void OnReportDeadBody()
     {
-        if (!IsEnable) return;
         if (StealMode.GetValue() == 1) return;
         foreach (var kvp1 in Targets)
         {
@@ -159,7 +164,10 @@ public static class Bandit
                 if (target == null) continue;
                 CustomRoles role = kvp2.Value;
                 Main.PlayerStates[targetId].RemoveSubRole(role);
+                if (role == CustomRoles.Aware) Main.AwareInteracted.Remove(target.PlayerId);
                 Logger.Info($"Successfully removed {role} addon from {target.GetNameWithRole()}", "Bandit");
+
+                if (role == CustomRoles.Aware && !Main.AwareInteracted.ContainsKey(target.PlayerId)) Main.AwareInteracted[target.PlayerId] = new();
                 banditpc.RpcSetCustomRole(role);
                 Logger.Info($"Successfully Added {role} addon to {banditpc.GetNameWithRole()}", "Bandit");
             }

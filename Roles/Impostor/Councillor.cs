@@ -88,8 +88,10 @@ public static class Councillor
 
             if (TryHideMsg.GetBool())
             {
-                if (Options.NewHideMsg.GetBool()) ChatManager.SendPreviousMessagesToAll();
-                else GuessManager.TryHideMsg();
+                //if (Options.NewHideMsg.GetBool()) ChatManager.SendPreviousMessagesToAll();
+                //else GuessManager.TryHideMsg();
+                GuessManager.TryHideMsg();
+                ChatManager.SendPreviousMessagesToAll();
             }
             else if (pc.AmOwner) Utils.SendMessage(originMsg, 255, pc.GetRealName());
 
@@ -126,6 +128,11 @@ public static class Councillor
                     if (!isUI) Utils.SendMessage(GetString("GuessMini"), pc.PlayerId);
                     else pc.ShowPopUp(GetString("GuessMini"));
                     return true;
+                }
+                else if (target.Is(CustomRoles.Rebound))
+                {
+                    Logger.Info($"{pc.GetNameWithRole()} judged {target.GetNameWithRole()}, councillor sucide = true because target rebound", "CouncillorTrialMsg");
+                    CouncillorSuicide = true;
                 }
                 else if (target.Is(CustomRoles.Madmate) && CanMurderMadmate.GetBool()) CouncillorSuicide = false;
                 else if (target.Is(CustomRoles.Parasite) && CanMurderMadmate.GetBool()) CouncillorSuicide = false;
@@ -214,7 +221,7 @@ public static class Councillor
     public static bool CheckCommond(ref string msg, string command, bool exact = true)
     {
         var comList = command.Split('|');
-        for (int i = 0; i < comList.Count(); i++)
+        for (int i = 0; i < comList.Length; i++)
         {
             if (exact)
             {

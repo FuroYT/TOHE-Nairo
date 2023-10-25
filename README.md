@@ -3,7 +3,7 @@
 
 <br>
 
-<img align="left" alt="Cover" src="Resources/Background/TOHE-Background-Old.jpg" width="50%" height="350" /> 
+<img align="left" alt="Cover" src="Resources/Background/TOHE-Background-Old.jpg" width="50%" height="300" /> 
 
 <p align="right">
   
@@ -12,15 +12,13 @@
 > This mod is not affiliated with Among Us or Innersloth LLC, and the content contained therein is not endorsed or otherwise sponsored by Innersloth LLC. Portions of the materials contained herein are the property of Innersloth LLC.
 <br>
 
-> Note: The website is still a Work In Progress, please bear with us - Moe 
 </p>
 <p align="center">
 
 <center>
 <a href="https://tohre.dev/" target="_blank"><img src="https://img.shields.io/badge/Website%20-%231DA1F2.svg?&style=for-the-badge&logo=vuedotjs&logoColor=white&color=3aa675"/></a>
-<a href="https://discord.gg/tohe" target="_blank"><img src="https://img.shields.io/badge/Discord%20-%231DA1F2.svg?&style=for-the-badge&logo=discord&logoColor=white&color=5662f6"/></a><br>
+<a href="https://discord.gg/tohe" target="_blank"><img src="https://img.shields.io/badge/Discord%20-%231DA1F2.svg?&style=for-the-badge&logo=discord&logoColor=white&color=5662f6"/></a>
 <a href="https://github.com/0xDrMoe/TownofHost-Enhanced/releases/latest" target="_blank"><img src="https://img.shields.io/badge/Latest Version%20-%231DA1F2.svg?&style=for-the-badge&logo=github&logoColor=white&color=181717"/></a>
-<a href="https://patreon.com/TOHRE" target="_blank"><img src="https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white"/></a>
 </center>
 
 
@@ -32,9 +30,14 @@
 <br>
 
 **Credit to these mods and their developers for the code and help:**
+### :star: [TOHRE](https://github.com/Loonie-Toons/) 
+> 
+> - TOH: Enhanced was forked from TOH-RE
+>
 ### :star: [TOHE](https://github.com/KARPED1EM/TownOfHostEdited) :
 > 
-> - Our repo is forked from TOHE
+> - TOHRE was forked from TOHE
+> 
 ### :star: [TOH](https://github.com/tukasa0001/TownOfHost) :
 > 
 > - Our repo is based initially on TOH
@@ -42,7 +45,7 @@
 ### :star: [TOHY](https://github.com/Yumenopai/TownOfHost_Y) :
 > 
 > - Many role ideas
-> - Provided roles: AntiAdminer, CursedWolf, Workaholic, Greedier, DarkHide
+> - Provided roles: AntiAdminer, CursedWolf, Workaholic, Greedier (Greedy), DarkHide (Stalker)
 > - Reference: Modify game announcement
 > 
 ### :star: [TOH:TOR](https://github.com/music-discussion/TownOfHost-TheOtherRoles) :
@@ -66,17 +69,21 @@
 > 
 > - Reference: Modify settings menu
 > 
-
 ### :star: [TOH+](https://github.com/SkullCreeper/TownOfHostPlus)
 >
 > - Provided roles: Shapeshifter, Engineer, Scientist, Marshall, Poisoner, Necroview, Sidekick
 > - Bait and Beartrap as add-ons
 >
-
 ### :star: [Project Lotus](https://github.com/ImaMapleTree/Lotus)
 >
 > - Ideas for some roles (such as Crusader)
-
+> 
 ### :star: [TOHE+](https://github.com/Gurge44/TOHE_PLUS)
 >
-> - Provided roles: Pyromaniac, Necromancer, Huntsman, Alchemist, and others
+> - Provided roles: Pyromaniac, Necromancer, Head Hunter (Huntsman), Alchemist, and others
+### :star: [TOHEX](https://github.com/TOHEX-Official/TownOfHostEdited-Xi)
+>
+> - Provided role: Swapper
+### :star: [Stellar Roles](https://github.com/Mr-Fluuff/StellarRolesAU)
+>
+> - Provided role: ParityCop (Inspector)

@@ -29,6 +29,7 @@ namespace TOHE.Roles.Impostor
         private static OptionItem ReduceVisionWhileInPact;
         private static OptionItem VisionWhileInPact;
         private static OptionItem KillDeathpactPlayersOnMeeting;
+        public static OptionItem PlayersInDeathpactCanCallMeeting;
 
         public static void SetupCustomOption()
         {
@@ -48,6 +49,7 @@ namespace TOHE.Roles.Impostor
             VisionWhileInPact = FloatOptionItem.Create(Id + 17, "DeathpactVisionWhileInPact", new(0f, 5f, 0.05f), 0.65f, TabGroup.ImpostorRoles, false).SetParent(ReduceVisionWhileInPact)
                 .SetValueFormat(OptionFormat.Multiplier);
             KillDeathpactPlayersOnMeeting = BooleanOptionItem.Create(Id + 18, "DeathpactKillPlayersInDeathpactOnMeeting", false, TabGroup.ImpostorRoles, false).SetParent(CustomRoleSpawnChances[CustomRoles.Deathpact]);
+            PlayersInDeathpactCanCallMeeting = BooleanOptionItem.Create(Id + 19, "DeathpactPlayersInDeathpactCanCallMeeting", true, TabGroup.ImpostorRoles, false).SetParent(CustomRoleSpawnChances[CustomRoles.Deathpact]);
         }
 
         public static void Init()
@@ -100,7 +102,7 @@ namespace TOHE.Roles.Impostor
             }
 
             pc.Notify(GetString("DeathpactComplete"));
-            DeathpactTime[pc.PlayerId] = GetTimeStamp() + (long)DeathpactDuration.GetInt();
+            DeathpactTime[pc.PlayerId] = GetTimeStamp() + DeathpactDuration.GetInt();
             ActiveDeathpacts.Add(pc.PlayerId);
 
             foreach (var player in PlayersInDeathpact[pc.PlayerId])
@@ -134,8 +136,6 @@ namespace TOHE.Roles.Impostor
 
         public static void OnFixedUpdate(PlayerControl player)
         {
-            if (!IsEnable) return;
-            if (!GameStates.IsInTask || !player.Is(CustomRoles.Deathpact)) return;
             if (!ActiveDeathpacts.Contains(player.PlayerId)) return;
             if (CheckCancelDeathpact(player)) return;
 
@@ -221,7 +221,7 @@ namespace TOHE.Roles.Impostor
 
         public static bool IsInActiveDeathpact(PlayerControl player)
         {
-            if (ActiveDeathpacts.Count == 0) return false;
+            if (!ActiveDeathpacts.Any()) return false;
             if (PlayersInDeathpact.Any(a => ActiveDeathpacts.Contains(a.Key) && a.Value.Any(b => b.PlayerId == player.PlayerId))) return true;
             return false;
         }
@@ -246,7 +246,7 @@ namespace TOHE.Roles.Impostor
 
                 otherPlayerNames = otherPlayerNames.Remove(otherPlayerNames.Length - 1);
 
-                int countdown = (int)(DeathpactTime[deathpact.Key] - Utils.GetTimeStamp());
+                int countdown = (int)(DeathpactTime[deathpact.Key] - GetTimeStamp());
 
                 result +=
                     $"{ColorString(GetRoleColor(CustomRoles.Impostor), string.Format(GetString("DeathpactActiveDeathpact"), otherPlayerNames, countdown))}";

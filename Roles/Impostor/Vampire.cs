@@ -78,17 +78,16 @@ public static class Vampire
 
     public static void OnFixedUpdate(PlayerControl vampire)
     {
-        if (!IsEnable) return;
-        if (!GameStates.IsInTask) return;
-
-        var vampireID = vampire.PlayerId;
         if (!IsThisRole(vampire.PlayerId)) return;
 
+        var vampireID = vampire.PlayerId;
         List<byte> targetList = new(BittenPlayers.Where(b => b.Value.VampireId == vampireID).Select(b => b.Key));
 
-        foreach (var targetId in targetList)
+        for (var id = 0; id < targetList.Count; id++)
         {
+            var targetId = targetList[id];
             var bitten = BittenPlayers[targetId];
+
             if (bitten.KillTimer >= KillDelay)
             {
                 var target = Utils.GetPlayerById(targetId);

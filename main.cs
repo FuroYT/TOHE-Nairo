@@ -35,15 +35,18 @@ public class Main : BasePlugin
     public static ConfigEntry<string> DebugKeyInput { get; private set; }
     public static readonly string MainMenuText = " ";
 
-    public const string PluginGuid = "com.karped1em.townofhostedited";
-    public const string PluginVersion = "1.0.1";
-    public const string PluginDisplayVersion = "1.0.1";
-    public const string PluginEditVersion = "1.0.2";
+    public const string PluginGuid = "com.0xdrmoe.townofhostenhanced";
+    public const string PluginVersion = "1.1.1";
+    public const string PluginDisplayVersion = "1.1.1";
+    public const string PluginEditVersion = "1.0.3";
     public static readonly string SupportedVersionAU = "2023.7.11";
-    public const bool Canary = false;
+    public const bool Canary = false; // Unused variable?
 
     public static readonly string[] nairoUrls = new string[] { "https://www.twitch.tv/arcade_nairo", "https://discord.gg/wD2e2t8MjN" };
     public static readonly bool[] nairoVisible = new bool[] { true, true };
+
+    public static readonly bool ShowKofiButton = true;
+    public static readonly string kofiInviteUrl = "https://ko-fi.com/TOHEN";
 
     public static readonly bool ShowGitHubButton = true;
     public static readonly string GitHubInviteUrl = "https://github.com/0xDrMoe/TownofHost-Enhanced";
@@ -129,7 +132,7 @@ public class Main : BasePlugin
     public static Dictionary<byte, Vector2> LastEnteredVentLocation = new();
     public static Dictionary<byte, Vector2> TimeMasterBackTrack = new();
     public static Dictionary<byte, int> MasochistKillMax = new();
-    public static Dictionary<byte, int> CultivatorKillMax = new();
+    public static Dictionary<byte, int> BerserkerKillMax = new();
     public static Dictionary<byte, int> TimeMasterNum = new();
     public static Dictionary<byte, long> TimeMasterInProtect = new();
     //public static Dictionary<byte, long> FlashbangInProtect = new();
@@ -177,11 +180,9 @@ public class Main : BasePlugin
     public static Dictionary<(byte, byte), bool> isRevealed = new();
     public static Dictionary<byte, (PlayerControl, float)> ArsonistTimer = new();
     public static Dictionary<byte, (PlayerControl, float)> RevolutionistTimer = new();
-    public static Dictionary<byte, (PlayerControl, float)> FarseerTimer = new();
     public static Dictionary<byte, long> RevolutionistStart = new();
     public static Dictionary<byte, long> RevolutionistLastTime = new();
     public static Dictionary<byte, int> RevolutionistCountdown = new();
-    public static Dictionary<byte, byte> BloodlustList = new();
     public static Dictionary<byte, byte> SpeedBoostTarget = new();
     public static Dictionary<byte, int> MayorUsedButtonCount = new();
     public static Dictionary<byte, int> ParaUsedButtonCount = new();
@@ -228,6 +229,7 @@ public class Main : BasePlugin
 
     public static Dictionary<byte, CustomRoles> DevRole = new();
     public static List<byte> GodfatherTarget = new();
+    public static Dictionary<byte, int> CrewpostorTasksDone = new();
     public static Dictionary<byte, List<string>> AwareInteracted = new();
     public static byte ShamanTarget = byte.MaxValue;
     public static bool ShamanTargetChoosen = false;
@@ -237,12 +239,17 @@ public class Main : BasePlugin
     public static IEnumerable<PlayerControl> AllPlayerControls => PlayerControl.AllPlayerControls.ToArray().Where(p => p != null);
     public static IEnumerable<PlayerControl> AllAlivePlayerControls => PlayerControl.AllPlayerControls.ToArray().Where(p => p != null && p.IsAlive() && !p.Data.Disconnected && !Pelican.IsEaten(p.PlayerId));
 
+    public static List<PlayerControl> AllPlayerControlsList => (List<PlayerControl>)PlayerControl.AllPlayerControls.ToArray().Where(p => p != null);
+    public static List<PlayerControl> AllAlivePlayerControlsList => (List<PlayerControl>)PlayerControl.AllPlayerControls.ToArray().Where(p => p != null && p.IsAlive() && !p.Data.Disconnected && !Pelican.IsEaten(p.PlayerId));
+
     public static Main Instance;
 
     //一些很新的东东
 
     public static string OverrideWelcomeMsg = "";
     public static int HostClientId;
+
+    public static Dictionary<byte, List<int>> GuessNumber = new();
 
     public static List<string> TName_Snacks_CN = new() { "冰激凌", "奶茶", "巧克力", "蛋糕", "甜甜圈", "可乐", "柠檬水", "冰糖葫芦", "果冻", "糖果", "牛奶", "抹茶", "烧仙草", "菠萝包", "布丁", "椰子冻", "曲奇", "红豆土司", "三彩团子", "艾草团子", "泡芙", "可丽饼", "桃酥", "麻薯", "鸡蛋仔", "马卡龙", "雪梅娘", "炒酸奶", "蛋挞", "松饼", "西米露", "奶冻", "奶酥", "可颂", "奶糖" };
     public static List<string> TName_Snacks_EN = new() { "Ice cream", "Milk tea", "Chocolate", "Cake", "Donut", "Coke", "Lemonade", "Candied haws", "Jelly", "Candy", "Milk", "Matcha", "Burning Grass Jelly", "Pineapple Bun", "Pudding", "Coconut Jelly", "Cookies", "Red Bean Toast", "Three Color Dumplings", "Wormwood Dumplings", "Puffs", "Can be Crepe", "Peach Crisp", "Mochi", "Egg Waffle", "Macaron", "Snow Plum Niang", "Fried Yogurt", "Egg Tart", "Muffin", "Sago Dew", "panna cotta", "soufflé", "croissant", "toffee" };
@@ -354,6 +361,7 @@ public class Main : BasePlugin
                 {CustomRoles.Psychic, "#6F698C"},
                 {CustomRoles.Cleanser,"#98FF98" },
                 {CustomRoles.Sheriff, "#ffb347"},
+                {CustomRoles.Vigilante, "#9900CC"},
                 {CustomRoles.CopyCat, "#ffb2ab"},
                 {CustomRoles.SuperStar, "#f6f657"},
                 {CustomRoles.CyberStar, "#ee4a55" },
@@ -405,9 +413,10 @@ public class Main : BasePlugin
                 {CustomRoles.Swapper, "#66E666"},
                 {CustomRoles.ChiefOfPolice,"#f8cd46"},
                 {CustomRoles.NiceMini, "#edc240" },
+                {CustomRoles.Spy, "#34495E"},
                 //第三陣営役職
                 {CustomRoles.Arsonist, "#ff6633"},
-                {CustomRoles.Pyromaniac, "#ff2400"},
+                {CustomRoles.Pyromaniac, "#fc8a4c"},
                 {CustomRoles.Agitater, "#F4A460"},
                 {CustomRoles.Bandit, "#8B008B"},
                 {CustomRoles.PlagueBearer,"#e5f6b4"},
@@ -435,10 +444,7 @@ public class Main : BasePlugin
                 {CustomRoles.Sunnyboy, "#ff9902"},
                 {CustomRoles.Poisoner, "#478800"},
                 {CustomRoles.Huntsman, "#ad8739"},
-                {CustomRoles.CovenLeader, "#663399"},
-                {CustomRoles.Ritualist, "#663399"},
                 {CustomRoles.Necromancer, "#9C87AB"},
-                {CustomRoles.Banshee, "#663399"},
                 {CustomRoles.NWitch, "#BF5FFF"},
                 {CustomRoles.Totocalcio, "#ff9409"},
                 {CustomRoles.Romantic, "#FF1493"},
@@ -446,9 +452,8 @@ public class Main : BasePlugin
                 {CustomRoles.RuthlessRomantic, "#D2691E"},
                 {CustomRoles.Succubus, "#cf6acd"},
                 {CustomRoles.HexMaster, "#ff00ff"},
-                {CustomRoles.Occultist, "#375d91"},
+                //{CustomRoles.Occultist, "#375d91"},
                 {CustomRoles.Wraith, "#4B0082"},
-                {CustomRoles.Shade, "#000930"},
                 {CustomRoles.NSerialKiller, "#233fcc"},
                 {CustomRoles.BloodKnight, "#630000"},
                 {CustomRoles.Juggernaut, "#A41342"},
@@ -498,7 +503,7 @@ public class Main : BasePlugin
                 {CustomRoles.Brakar, "#1447af"},
                 {CustomRoles.Oblivious, "#424242"},
                 {CustomRoles.Bewilder, "#c894f5"},
-                {CustomRoles.Sunglasses, "#E7C12B"},
+                //{CustomRoles.Sunglasses, "#E7C12B"},
                 {CustomRoles.Workhorse, "#00ffff"},
                 {CustomRoles.Fool, "#e6e7ff"},
                 {CustomRoles.Avanger, "#ffab1c"},
@@ -516,6 +521,7 @@ public class Main : BasePlugin
                 {CustomRoles.Trapper, "#5a8fd0"},
                 {CustomRoles.Infected, "#7B8968"},
                 {CustomRoles.Onbound, "#BAAAE9"},
+                {CustomRoles.Rebound, "#56b5ff"},
                 {CustomRoles.Knighted, "#FFA500"},
                 {CustomRoles.Contagious, "#2E8B57"},
                 {CustomRoles.Unreportable, "#FF6347"},
@@ -533,7 +539,7 @@ public class Main : BasePlugin
                 {CustomRoles.Visionary, "#ff1919"},
                 {CustomRoles.Recruit, "#00b4eb"},
                 {CustomRoles.Admired, "#ee43c3"},
-                {CustomRoles.Glow, "#E2F147"},
+                //{CustomRoles.Glow, "#E2F147"},
                 {CustomRoles.Diseased, "#AAAAAA"},
                 {CustomRoles.Antidote,"#FF9876"},
                 {CustomRoles.VoidBallot,"#FF3399"},
@@ -564,9 +570,6 @@ public class Main : BasePlugin
                     case CustomRoleTypes.Impostor:
                         roleColors.TryAdd(role, "#ff1919");
                         break;
-               /*     case CustomRoleTypes.Coven:
-                        roleColors.TryAdd(role, "#663399"); 
-                        break; */
                     default:
                         break;
                 }
@@ -683,7 +686,7 @@ public enum CustomRoles
     Twister,
     Lurker,
     Convict,
-    Cultivator,
+    Berserker,
     Visionary,
     Refugee,
     Underdog,
@@ -715,6 +718,7 @@ public enum CustomRoles
     Psychic,
     SabotageMaster,
     Sheriff,
+    Vigilante,
     Snitch,
     Jailer,
     Marshall,
@@ -767,6 +771,7 @@ public enum CustomRoles
     Swapper,
     ChiefOfPolice,
     NiceMini,
+    Spy,
 
     //Neutral
     Arsonist,
@@ -830,13 +835,9 @@ public enum CustomRoles
     Masochist,
     Shroud,
     Werewolf,
-    CovenLeader,
-    Ritualist,
     Necromancer,
     Huntsman,
-    Banshee,
-    Occultist,
-    Shade,
+    //Occultist,
     Imitator,
    //two-way camp
     Mini,
@@ -859,7 +860,7 @@ public enum CustomRoles
     Brakar,
     Oblivious,
     Bewilder,
-    Sunglasses,
+    //Sunglasses,
     Workhorse,
     Fool,
     Avanger,
@@ -877,6 +878,7 @@ public enum CustomRoles
     Trapper,
     Infected,
     Onbound,
+    Rebound,
     Knighted,
     Contagious,
     Unreportable,
@@ -894,7 +896,7 @@ public enum CustomRoles
     EvilSpirit,
     Recruit,
     Admired,
-    Glow,
+    //Glow,
     Diseased,
     Antidote,
     VoidBallot,
@@ -948,11 +950,10 @@ public enum CustomWinner
     BloodKnight = CustomRoles.BloodKnight,
     Poisoner = CustomRoles.Poisoner,
     HexMaster = CustomRoles.HexMaster,
-    Occultist = CustomRoles.Occultist,
+    //Occultist = CustomRoles.Occultist,
     Succubus = CustomRoles.Succubus,
     Wraith = CustomRoles.Wraith,
     Bandit = CustomRoles.Bandit,
-    Shade = CustomRoles.Shade,
     Pirate = CustomRoles.Pirate,
     SerialKiller = CustomRoles.NSerialKiller,
     Werewolf = CustomRoles.Werewolf,
@@ -978,7 +979,6 @@ public enum CustomWinner
     Masochist = CustomRoles.Masochist,
     Doomsayer = CustomRoles.Doomsayer,
     Shroud = CustomRoles.Shroud,
-    Coven = CustomRoles.CovenLeader,
     Seeker = CustomRoles.Seeker,
     SoulCollector = CustomRoles.SoulCollector,
     RuthlessRomantic = CustomRoles.RuthlessRomantic,

@@ -117,7 +117,6 @@ public static class Divinator
                 CustomRoles.PlagueBearer or
                 CustomRoles.Observer or
                 CustomRoles.BloodKnight or
-                CustomRoles.Banshee or
                 CustomRoles.Guardian or
                 CustomRoles.Wildling
                 => "Result4",
@@ -125,9 +124,10 @@ public static class Divinator
                 CustomRoles.Bard or
                 CustomRoles.Juggernaut or
                 CustomRoles.Reverie or
+                CustomRoles.Vigilante or
                 CustomRoles.Sans or
                 CustomRoles.Minimalism or
-                CustomRoles.Cultivator or
+                CustomRoles.Berserker or
                 CustomRoles.OverKiller
                 => "Result5",
 
@@ -172,7 +172,8 @@ public static class Divinator
                 CustomRoles.Judge or
                 CustomRoles.CursedSoul or
                 CustomRoles.Cleanser or
-                CustomRoles.CursedWolf
+                CustomRoles.CursedWolf or
+                CustomRoles.President
                 => "Result10",
 
                 CustomRoles.Addict or
@@ -206,6 +207,7 @@ public static class Divinator
                 CustomRoles.Paranoia or
                 CustomRoles.Mastermind or
                 CustomRoles.Pickpocket or
+                CustomRoles.Spy or
                 CustomRoles.Vindicator
                 => "Result14",
 
@@ -245,14 +247,13 @@ public static class Divinator
                 CustomRoles.EvilGuesser or
                 CustomRoles.NiceGuesser or
                 CustomRoles.DarkHide or
-                CustomRoles.Ritualist or
                 CustomRoles.Camouflager or
-                CustomRoles.Shade or
                 CustomRoles.Chameleon or
                 CustomRoles.Doppelganger
                 => "Result19",
 
                 CustomRoles.Jackal or
+                CustomRoles.Jailer or
                 CustomRoles.Sidekick or
                 CustomRoles.Maverick or
                 CustomRoles.Opportunist or
@@ -265,7 +266,6 @@ public static class Divinator
                 CustomRoles.DovesOfNeace or
                 CustomRoles.ImperiusCurse or
                 CustomRoles.Huntsman or
-                CustomRoles.CovenLeader or
                 CustomRoles.Traitor
                 => "Result21",
 
@@ -280,7 +280,7 @@ public static class Divinator
                 CustomRoles.Divinator or
                 CustomRoles.EvilDiviner or
                 CustomRoles.PotionMaster or
-                CustomRoles.Occultist or
+                //CustomRoles.Occultist or
                 CustomRoles.HexMaster or
                 CustomRoles.Witch
                 => "Result23",
@@ -495,8 +495,7 @@ public static class Divinator
     }
     public static void OnReportDeadBody()
     {
-        if (!IsEnable) return;
-
+        didVote.Clear();
         foreach (var divinatorId in playerIdList)
         {
             TempCheckLimit[divinatorId] = CheckLimit[divinatorId];

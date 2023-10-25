@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using Hazel;
+﻿using Hazel;
 using System.Collections.Generic;
 using System.Linq;
 using TOHE.Modules.ChatManager;
@@ -11,16 +10,19 @@ namespace TOHE.Roles.Crewmate;
 public static class President
 {
     private static readonly int Id = 4391357;
-    private static List<byte> playerIdList = new();
+    public static bool IsEnable = false;
+
+    public static Dictionary<byte, int> EndLimit;
+    public static Dictionary<byte, int> RevealLimit;
+    public static Dictionary<byte, bool> CheckPresidentReveal = new();
+
+
     public static OptionItem PresidentAbilityUses;
     public static OptionItem PresidentCanBeGuessedAfterRevealing;
     public static OptionItem HidePresidentEndCommand;
     public static OptionItem NeutralsSeePresident;
     public static OptionItem MadmatesSeePresident;
     public static OptionItem ImpsSeePresident;
-    public static Dictionary<byte, int> EndLimit;
-    public static Dictionary<byte, int> RevealLimit;
-    public static Dictionary<byte, bool> CheckPresidentReveal = new();
 
 
     public static void SetupCustomOption()
@@ -39,13 +41,15 @@ public static class President
         CheckPresidentReveal = new();
         EndLimit = new();
         RevealLimit = new();
+        IsEnable = false;
     }
     public static void Add(byte playerId)
     {
+        CheckPresidentReveal.Add(playerId, false);
         EndLimit.Add(playerId, PresidentAbilityUses.GetInt());
         RevealLimit.Add(playerId, 1);
+        IsEnable = true;
     }
-    public static bool IsEnable => playerIdList.Count > 0;
     public static string GetEndLimit(byte playerId) => Utils.ColorString(EndLimit[playerId] > 0 ? Utils.GetRoleColor(CustomRoles.President) : Color.gray, EndLimit.TryGetValue(playerId, out var endLimit) ? $"({endLimit})" : "Invalid");
 
     public static void TryHideMsgForPresident()
@@ -58,7 +62,7 @@ public static class President
         {
             msg = "/";
             if (rd.Next(1, 100) < 20)
-                msg += "end";
+                msg += "finish";
             else
                 msg += "reveal";
             var player = Main.AllAlivePlayerControls.ToArray()[rd.Next(0, Main.AllAlivePlayerControls.Count())];
@@ -84,7 +88,7 @@ public static class President
 
         int operate = 0;
         msg = msg.ToLower().TrimStart().TrimEnd();
-        if (CheckCommond(ref msg, "end")) operate = 1;
+        if (CheckCommond(ref msg, "finish")) operate = 1;
         else if (CheckCommond(ref msg, "reveal")) operate = 2;
         else return false;
 
@@ -99,8 +103,10 @@ public static class President
 
             if (HidePresidentEndCommand.GetBool())
             {
-                if (Options.NewHideMsg.GetBool()) ChatManager.SendPreviousMessagesToAll();
-                else TryHideMsgForPresident();
+                //if (Options.NewHideMsg.GetBool()) ChatManager.SendPreviousMessagesToAll();
+                //else TryHideMsgForPresident();
+                TryHideMsgForPresident();
+                ChatManager.SendPreviousMessagesToAll();
             }
             else if (pc.AmOwner) Utils.SendMessage(originMsg, 255, pc.GetRealName());
 
@@ -118,8 +124,10 @@ public static class President
 
             if (HidePresidentEndCommand.GetBool())
             {
-                if (Options.NewHideMsg.GetBool()) ChatManager.SendPreviousMessagesToAll();
-                else TryHideMsgForPresident();
+                //if (Options.NewHideMsg.GetBool()) ChatManager.SendPreviousMessagesToAll();
+                //else TryHideMsgForPresident();
+                TryHideMsgForPresident();
+                ChatManager.SendPreviousMessagesToAll();
             }
             else if (pc.AmOwner) Utils.SendMessage(originMsg, 255, pc.GetRealName());
 
@@ -138,6 +146,7 @@ public static class President
                 if (!ImpsSeePresident.GetBool() && (tar.GetCustomRole().IsImpostor() || tar.Is(CustomRoles.Crewpostor))) continue;
                 Utils.SendMessage(string.Format(GetString("PresidentRevealed"), pc.GetRealName()), tar.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.President), GetString("PresidentRevealTitle")));
             }
+            SendRPC(pc.PlayerId, isEnd: false);
         }
         return true;
     }
@@ -162,15 +171,31 @@ public static class President
         return false;
     }
 
-    private static void SendRPC(byte playerId)
+    private static void SendRPC(byte playerId, bool isEnd = true)
     {
-        MessageWriter writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.PresidentEnd, SendOption.Reliable, -1);
+        MessageWriter writer;
+        if (!isEnd)
+        {
+            writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.PresidentReveal, SendOption.Reliable, -1);
+            writer.Write(playerId);
+            writer.Write(CheckPresidentReveal[playerId]);
+            AmongUsClient.Instance.FinishRpcImmediately(writer);
+            return;
+        }
+        writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.PresidentEnd, SendOption.Reliable, -1);
         writer.Write(playerId);
         AmongUsClient.Instance.FinishRpcImmediately(writer);
     }
-    public static void ReceiveRPC(MessageReader reader, PlayerControl pc)
+    public static void ReceiveRPC(MessageReader reader, PlayerControl pc, bool isEnd = true)
     {
-        int PlayerId = reader.ReadByte();
-        EndMsg(pc, $"/end");
+        byte PlayerId = reader.ReadByte();
+        if (!isEnd) 
+        {
+            bool revealed = reader.ReadBoolean();
+            if (CheckPresidentReveal.ContainsKey(PlayerId)) CheckPresidentReveal[PlayerId] = revealed;
+            else CheckPresidentReveal.Add(PlayerId, false);
+            return;
+        }
+        EndMsg(pc, $"/finish");
     }
 }

@@ -14,7 +14,7 @@ public abstract class GameOptionsSender
 
     public static void SendAllGameOptions()
     {
-        AllSenders.RemoveAll(s => !s.AmValid());
+        AllSenders.RemoveAll(s => !s.AmValid()); // .AmValid() has a virtual property, so it doesn't always return true
         foreach (var sender in AllSenders)
         {
             if (sender.IsDirty) sender.SendGameOptions();
@@ -43,11 +43,11 @@ public abstract class GameOptionsSender
         else
         {
             writer.Recycle();
-            Logger.Error("オプションのキャストに失敗しました", this.ToString());
+            Logger.Error("Option Cast Failed", this.ToString());
         }
         writer.EndMessage();
 
-        // 配列化&送信
+        // Create into array
         var byteArray = new Il2CppStructArray<byte>(writer.Length - 1);
         // MessageWriter.ToByteArray
         Buffer.BlockCopy(writer.Buffer.Cast<Array>(), 1, byteArray.Cast<Array>(), 0, writer.Length - 1);

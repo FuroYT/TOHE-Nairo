@@ -69,7 +69,16 @@ public static class Camouflage
 
             case 4: // Moe
                 CamouflageOutfit = new GameData.PlayerOutfit()
-                    .Set("", 4, "hat_mira_headset_yellow", "skin_SuitB", "visor_lollipopCrew", "pet_EmptyPet", "");
+                    .Set("", 0, "hat_mira_headset_yellow", "skin_SuitB", "visor_lollipopCrew", "pet_EmptyPet", "");
+                break;
+
+            case 5: // Pyro
+                CamouflageOutfit = new GameData.PlayerOutfit()
+                    .Set("", 17, "hat_pkHW01_Witch", "skin_greedygrampaskin", "visor_Plsno", "pet_Pusheen", "");
+                break;
+            case 6: // ryuk
+                CamouflageOutfit = new GameData.PlayerOutfit()
+                    .Set("", 7, "hat_crownDouble", "skin_D2Saint14", "visor_anime", "pet_Bush", "");
                 break;
         }
     }

@@ -10,12 +10,12 @@ using Hazel;
 using InnerNet;
 using UnityEngine;
 using TOHE.Modules;
+using TOHE.Roles.Double;
 using TOHE.Roles.AddOns.Crewmate;
 using TOHE.Roles.Crewmate;
 using TOHE.Roles.Impostor;
 using TOHE.Roles.Neutral;
 using static TOHE.Translator;
-using TOHE.Roles.Double;
 
 namespace TOHE;
 
@@ -25,7 +25,7 @@ class CheckProtectPatch
     public static bool Prefix(PlayerControl __instance, [HarmonyArgument(0)] PlayerControl target)
     {
         if (!AmongUsClient.Instance.AmHost) return false;
-        Logger.Info("CheckProtect発生: " + __instance.GetNameWithRole() + "=>" + target.GetNameWithRole(), "CheckProtect");
+        Logger.Info("CheckProtect occurs: " + __instance.GetNameWithRole() + "=>" + target.GetNameWithRole(), "CheckProtect");
 
         if (__instance.Is(CustomRoles.EvilSpirit))
         {
@@ -46,7 +46,7 @@ class CheckProtectPatch
         {
             if (__instance.Data.IsDead)
             {
-                Logger.Info("守護をブロックしました。", "CheckProtect");
+                Logger.Info("Blocked protection", "CheckProtect");
                 return false;
             }
         }
@@ -72,119 +72,143 @@ class CheckMurderPatch
     {
         if (!AmongUsClient.Instance.AmHost) return false;
 
-        var killer = __instance; //読み替え変数
+        var killer = __instance; // Alternative variable
+
+        var killerRole = __instance.GetCustomRole();
+        var targetRole = target.GetCustomRole();
 
         Logger.Info($"{killer.GetNameWithRole()} => {target.GetNameWithRole()}", "CheckMurder");
 
-        //死人はキルできない
-        if (killer.Data.IsDead)
+        // Killer is already dead
+        if (!killer.IsAlive())
         {
-            Logger.Info($"{killer.GetNameWithRole()}は死亡しているためキャンセルされました。", "CheckMurder");
+            Logger.Info($"{killer.GetNameWithRole()} was cancelled because it is dead", "CheckMurder");
             return false;
         }
 
-        //不正キル防止処理
-        if (target.Data == null || //PlayerDataがnullじゃないか確認
-            target.inVent || target.inMovingPlat //targetの状態をチェック
+        // Is the target in a killable state?
+        if (target.Data == null // Check if PlayerData is not null
+                                // Check target status
+            || target.inVent
+            || target.MyPhysics.Animations.IsPlayingEnterVentAnimation()
+            || target.MyPhysics.Animations.IsPlayingAnyLadderAnimation()
+            || target.inMovingPlat
         )
         {
-            Logger.Info("目标处于无法被击杀状态，击杀被取消", "CheckMurder");
+            Logger.Info("The target is in an unkillable state and the kill is canceled", "CheckMurder");
             return false;
         }
-        if (target.Data.IsDead) //同じtargetへの同時キルをブロック
+        // Target Is Dead?
+        if (!target.IsAlive())
         {
-            Logger.Info("目标处于死亡状态，击杀被取消", "CheckMurder");
+            Logger.Info("The target is in a dead state and the kill is canceled", "CheckMurder");
             return false;
         }
-        if (MeetingHud.Instance != null) //会議中でないかの判定
+        // Checking during the meeting
+        if (MeetingHud.Instance != null)
         {
-            Logger.Info("会议中，击杀被取消", "CheckMurder");
+            Logger.Info("In the meeting, the kill was canceled", "CheckMurder");
             return false;
         }
 
         var divice = 2000f;
-        float minTime = Mathf.Max(0.02f, AmongUsClient.Instance.Ping / divice * 6f); //※AmongUsClient.Instance.Pingの値はミリ秒(ms)なので÷1000
-        //TimeSinceLastKillに値が保存されていない || 保存されている時間がminTime以上 => キルを許可
-        //↓許可されない場合
+        float minTime = Mathf.Max(0.02f, AmongUsClient.Instance.Ping / divice * 6f); //Ping value is milliseconds (ms), so ÷ 2000
+                                                                                     // No value is stored in TimeSinceLastKill || Stored time is greater than or equal to minTime => Allow kill
+
+        //↓ If not permitted
         if (TimeSinceLastKill.TryGetValue(killer.PlayerId, out var time) && time < minTime)
         {
-            Logger.Info("击杀间隔过短，击杀被取消", "CheckMurder");
+            Logger.Info("Kill intervals are too short and kills are canceled", "CheckMurder");
             return false;
         }
         TimeSinceLastKill[killer.PlayerId] = 0f;
-        if (target.Is(CustomRoles.Diseased))
+
+        switch (targetRole)
         {
-            if (Main.KilledDiseased.ContainsKey(killer.PlayerId))
-            {
-                // Key already exists, update the value
-                Main.KilledDiseased[killer.PlayerId] += 1;
-            }
-            else
-            {
-                // Key doesn't exist, add the key-value pair
-                Main.KilledDiseased.Add(killer.PlayerId, 1);
-            }
-        }
-        if (target.Is(CustomRoles.Antidote))
-        {
-            if (Main.KilledAntidote.ContainsKey(killer.PlayerId))
-            {
-                // Key already exists, update the value
-                Main.KilledAntidote[killer.PlayerId] += 1;// Main.AllPlayerKillCooldown.TryGetValue(killer.PlayerId, out float kcd) ? (kcd - Options.AntidoteCDOpt.GetFloat() > 0 ? kcd - Options.AntidoteCDOpt.GetFloat() : 0f) : 0f;
-            }
-            else
-            {
-                // Key doesn't exist, add the key-value pair
-                Main.KilledAntidote.Add(killer.PlayerId, 1);// Main.AllPlayerKillCooldown.TryGetValue(killer.PlayerId, out float kcd) ? (kcd - Options.AntidoteCDOpt.GetFloat() > 0 ? kcd - Options.AntidoteCDOpt.GetFloat() : 0f) : 0f);
-            }
+            case CustomRoles.Diseased:
+                if (Main.KilledDiseased.ContainsKey(killer.PlayerId))
+                {
+                    // Key already exists, update the value
+                    Main.KilledDiseased[killer.PlayerId] += 1;
+                }
+                else
+                {
+                    // Key doesn't exist, add the key-value pair
+                    Main.KilledDiseased.Add(killer.PlayerId, 1);
+                }
+                break;
+
+            case CustomRoles.Antidote:
+                if (Main.KilledAntidote.ContainsKey(killer.PlayerId))
+                {
+                    // Key already exists, update the value
+                    Main.KilledAntidote[killer.PlayerId] += 1;
+                    // Main.AllPlayerKillCooldown.TryGetValue(killer.PlayerId, out float kcd) ? (kcd - Options.AntidoteCDOpt.GetFloat() > 0 ? kcd - Options.AntidoteCDOpt.GetFloat() : 0f) : 0f;
+                }
+                else
+                {
+                    // Key doesn't exist, add the key-value pair
+                    Main.KilledAntidote.Add(killer.PlayerId, 1);
+                    // Main.AllPlayerKillCooldown.TryGetValue(killer.PlayerId, out float kcd) ? (kcd - Options.AntidoteCDOpt.GetFloat() > 0 ? kcd - Options.AntidoteCDOpt.GetFloat() : 0f) : 0f);
+                }
+                break;
+
+            case CustomRoles.Fragile:
+                if ((killerRole.IsImpostorTeamV3() && Options.ImpCanKillFragile.GetBool()) ||
+                    (killerRole.IsNeutral() && Options.NeutralCanKillFragile.GetBool()) ||
+                    (killerRole.IsCrewmate() && Options.CrewCanKillFragile.GetBool()))
+                {
+                    if (Options.FragileKillerLunge.GetBool())
+                    {
+                        killer.RpcMurderPlayer(target);
+                    }
+                    else
+                    {
+                        target.RpcMurderPlayer(target);
+                    }
+                    Main.PlayerStates[target.PlayerId].deathReason = PlayerState.DeathReason.Shattered;
+                    target.SetRealKiller(target);
+                    target.SetRealKiller(killer);
+                    killer.ResetKillCooldown();
+                    return false;
+                }
+                break;
+
+            case CustomRoles.Aware:
+                switch (killerRole)
+                {
+                    case CustomRoles.EvilDiviner:
+                    case CustomRoles.Farseer:
+                        if (!Main.AwareInteracted.ContainsKey(target.PlayerId))
+                        {
+                            Main.AwareInteracted.Add(target.PlayerId, new());
+                        }
+                        if (!Main.AwareInteracted[target.PlayerId].Contains(Utils.GetRoleName(killerRole)))
+                        {
+                            Main.AwareInteracted[target.PlayerId].Add(Utils.GetRoleName(killerRole));
+                        }
+                        break;
+                }
+                break;
+
+            case CustomRoles.Shaman:
+                if (Main.ShamanTarget != byte.MaxValue && target.IsAlive())
+                {
+                    target = Utils.GetPlayerById(Main.ShamanTarget);
+                    Main.ShamanTarget = byte.MaxValue;
+                }
+                break;
         }
 
-        if (target.Is(CustomRoles.Fragile))
-        {
-            if ((killer.GetCustomRole().IsImpostorTeamV3() && Options.ImpCanKillFragile.GetBool()) ||
-                (killer.GetCustomRole().IsNeutral() && Options.NeutralCanKillFragile.GetBool()) ||
-                (killer.GetCustomRole().IsCrewmate() && Options.CrewCanKillFragile.GetBool()))
-            {
-                if (Options.FragileKillerLunge.GetBool()) killer.RpcMurderPlayer(target);
-                else target.RpcMurderPlayer(target);
-                Main.PlayerStates[target.PlayerId].deathReason = PlayerState.DeathReason.Shattered;
-                target.SetRealKiller(target);
-                killer.ResetKillCooldown();
-                return false;
-            }
-        }
-
-        if (target.Is(CustomRoles.Aware))
-        {
-            switch (killer.GetCustomRole())
-            {
-                case CustomRoles.EvilDiviner:
-                case CustomRoles.Farseer:
-                case CustomRoles.Ritualist:
-                    if (!Main.AwareInteracted.ContainsKey(target.PlayerId)) Main.AwareInteracted.Add(target.PlayerId, new());
-                    if (!Main.AwareInteracted[target.PlayerId].Contains(Utils.GetRoleName(killer.GetCustomRole()))) Main.AwareInteracted[target.PlayerId].Add(Utils.GetRoleName(killer.GetCustomRole()));
-                    break;
-            }
-        }
-        if (target.Is(CustomRoles.Shaman) && !killer.Is(CustomRoles.NWitch))
-        {
-            if (Main.ShamanTarget != byte.MaxValue && target.IsAlive())
-            { 
-                target = Utils.GetPlayerById(Main.ShamanTarget);
-                Main.ShamanTarget = byte.MaxValue;
-            }
-
-        }
-        
-        if (killer.Is(CustomRoles.Chronomancer))
+        if (killerRole.Is(CustomRoles.Chronomancer))
             Chronomancer.OnCheckMurder(killer);
 
         killer.ResetKillCooldown();
 
-        //キル可能判定
+        // killable decision
         if (killer.PlayerId != target.PlayerId && !killer.CanUseKillButton())
         {
-            Logger.Info(killer.GetNameWithRole() + "击杀者不被允许使用击杀键，击杀被取消", "CheckMurder");
+            Logger.Info(killer.GetNameWithRole() + " The hitter is not allowed to use the kill button and the kill is canceled", "CheckMurder");
             return false;
         }
 
@@ -193,42 +217,59 @@ class CheckMurderPatch
             return Mastermind.ForceKillForManipulatedPlayer(killer, target);
         }
 
-        //実際のキラーとkillerが違う場合の入れ替え処理
-        if (Sniper.IsEnable) Sniper.TryGetSniper(target.PlayerId, ref killer);
-        if (killer != __instance) Logger.Info($"Real Killer={killer.GetNameWithRole()}", "CheckMurder");
+        // Replacement process when the actual killer and the KILLER are different
+        if (Sniper.IsEnable)
+        {
+            Sniper.TryGetSniper(target.PlayerId, ref killer);
+        }
+        if (killer != __instance)
+        {
+            Logger.Info($"Real Killer = {killer.GetNameWithRole()}", "CheckMurder");
+        }
 
-        //鹈鹕肚子里的人无法击杀
+        killerRole = killer.GetCustomRole();
+        targetRole = target.GetCustomRole();
+
+        //Is eaten player can't be killed.
         if (Pelican.IsEaten(target.PlayerId))
             return false;
 
-        //阻止对活死人的操作
-
-        // 赝品检查
-        if (Counterfeiter.OnClientMurder(killer)) return false;
-        if (Pursuer.OnClientMurder(killer)) return false;
-        if (Addict.IsImmortal(target)) return false;
-        if (target.Is(CustomRoles.Necromancer) && !Necromancer.OnKillAttempt(killer, target)) return false;
-        
-        if (Alchemist.IsProtected && target.Is(CustomRoles.Alchemist))
-        {
-            killer.SetKillCooldown(time: 5f);
+        // Fake Check
+        if (Counterfeiter.OnClientMurder(killer))
             return false;
-        };
-        
+
+        if (Pursuer.OnClientMurder(killer))
+            return false;
+
+        if (Addict.IsImmortal(target))
+            return false;
+
         if (Glitch.hackedIdList.ContainsKey(killer.PlayerId))
         {
             killer.Notify(string.Format(GetString("HackedByGlitch"), GetString("GlitchKill")));
             return false;
         }
 
-        //判定凶手技能
+        if (targetRole.Is(CustomRoles.Necromancer) && !Necromancer.OnKillAttempt(killer, target))
+            return false;
+
+        if (targetRole.Is(CustomRoles.Spy) && !Spy.OnKillAttempt(killer, target))
+            return false;
+
+        if (Alchemist.IsProtected && targetRole.Is(CustomRoles.Alchemist))
+        {
+            killer.SetKillCooldown(time: 5f);
+            return false;
+        };
+
+        // Сheck Suicide
         if (killer.PlayerId != target.PlayerId)
         {
-            //非自杀场景下才会触发
-            switch (killer.GetCustomRole())
+            // Triggered only in non-suicide scenarios
+            switch (killerRole)
             {
-                //==========内鬼阵营==========//
-                case CustomRoles.BountyHunter: //必须在击杀发生前处理
+                //==========On Check Murder==========//
+                case CustomRoles.BountyHunter:
                     BountyHunter.OnCheckMurder(killer, target);
                     break;
                 case CustomRoles.SerialKiller:
@@ -291,9 +332,9 @@ class CheckMurderPatch
                 case CustomRoles.Huntsman:
                     Huntsman.OnCheckMurder(killer, target);
                     break;
-                case CustomRoles.Occultist:
-                    if (!Occultist.OnCheckMurder(killer, target)) return false;
-                    break;
+                //case CustomRoles.Occultist:
+                //    if (!Occultist.OnCheckMurder(killer, target)) return false;
+                //    break;
                 case CustomRoles.Puppeteer:
                     if (!Puppeteer.OnCheckPuppet(killer, target)) return false;
                     break;
@@ -306,9 +347,6 @@ class CheckMurderPatch
                 case CustomRoles.NWitch:
                     if (!NWitch.OnCheckMurder(killer, target)) return false;
                     break;
-                case CustomRoles.CovenLeader:
-                    if (!CovenLeader.OnCheckMurder(killer, target)) return false;
-                    break;
                 case CustomRoles.Shroud:
                     if (!Shroud.OnCheckMurder(killer, target)) return false;
                     break;
@@ -320,11 +358,11 @@ class CheckMurderPatch
                         Main.CapitalismAssignTask.Add(target.PlayerId, 0);
                     Main.CapitalismAssignTask[target.PlayerId]++;
                     Logger.Info($"资本主义 {killer.GetRealName()} 又开始祸害人了：{target.GetRealName()}", "Capitalism Add Task");
-                    if (!Options.DisableShieldAnimations.GetBool()) killer.RpcGuardAndKill(killer); 
+                    if (!Options.DisableShieldAnimations.GetBool()) killer.RpcGuardAndKill(killer);
                     killer.SetKillCooldown();
                     return false;
-           /*     case CustomRoles.Bomber:
-                    return false; */
+                /*     case CustomRoles.Bomber:
+                         return false; */
                 case CustomRoles.Gangster:
                     if (Gangster.OnCheckMurder(killer, target))
                         return false;
@@ -346,7 +384,7 @@ class CheckMurderPatch
                     Juggernaut.OnCheckMurder(killer);
                     break;
                 case CustomRoles.Reverie:
-                    Reverie.OnCheckMurder(killer);
+                    Reverie.OnCheckMurder(killer, target);
                     break;
                 case CustomRoles.Hangman:
                     if (!Hangman.OnCheckMurder(killer, target)) return false;
@@ -356,9 +394,6 @@ class CheckMurderPatch
                     break;
                 case CustomRoles.Wraith:
                     if (!Wraith.OnCheckMurder(killer, target)) return false;
-                    break;
-                case CustomRoles.Shade:
-                    if (!Shade.OnCheckMurder(killer, target)) return false;
                     break;
                 case CustomRoles.Lurker:
                     Lurker.OnCheckMurder(killer);
@@ -399,13 +434,7 @@ class CheckMurderPatch
                     }
                     return false;
                 case CustomRoles.Farseer:
-                    killer.SetKillCooldown(Farseer.FarseerRevealTime.GetFloat());
-                    if (!Main.isRevealed[(killer.PlayerId, target.PlayerId)] && !Main.FarseerTimer.ContainsKey(killer.PlayerId))
-                    {
-                        Main.FarseerTimer.TryAdd(killer.PlayerId, (target, 0f));
-                        Utils.NotifyRoles(SpecifySeer: __instance);
-                        RPC.SetCurrentRevealTarget(killer.PlayerId, target.PlayerId);
-                    }
+                    Farseer.OnCheckMurder(killer, target, __instance);
                     return false;
                 case CustomRoles.Innocent:
                     target.RpcMurderPlayerV3(killer);
@@ -421,15 +450,7 @@ class CheckMurderPatch
                     }
                     return false;
                 case CustomRoles.FFF:
-                    if (!target.Is(CustomRoles.Lovers) && !target.Is(CustomRoles.Ntr))
-                    {
-                        killer.Data.IsDead = true;
-                        Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Sacrifice;
-                        killer.RpcMurderPlayerV3(killer);
-                        Main.PlayerStates[killer.PlayerId].SetDead();
-                        Logger.Info($"{killer.GetRealName()} 击杀了非目标玩家，壮烈牺牲了（bushi）", "FFF");
-                        return false;
-                    }
+                    if (!FFF.OnCheckMurder(killer, target)) return false;
                     break;
                 case CustomRoles.Gamer:
                     Gamer.CheckGamerMurder(killer, target);
@@ -438,6 +459,11 @@ class CheckMurderPatch
                     DarkHide.OnCheckMurder(killer, target);
                     break;
                 case CustomRoles.Provocateur:
+                    if (Mini.Age < 18 && (target.Is(CustomRoles.NiceMini) || target.Is(CustomRoles.EvilMini)))
+                    {
+                        killer.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.NiceMini), GetString("CantBoom")));
+                        return false;
+                    }
                     Main.PlayerStates[target.PlayerId].deathReason = PlayerState.DeathReason.PissedOff;
                     killer.RpcMurderPlayerV3(target);
                     killer.RpcMurderPlayerV3(killer);
@@ -511,7 +537,7 @@ class CheckMurderPatch
                     if (!CopyCat.OnCheckMurder(killer, target))
                         return false;
                     break;
-                
+
                 case CustomRoles.SwordsMan:
                     if (!SwordsMan.OnCheckMurder(killer))
                         return false;
@@ -524,6 +550,16 @@ class CheckMurderPatch
                     if (Counterfeiter.CanBeClient(target) && Counterfeiter.CanSeel(killer.PlayerId))
                         Counterfeiter.SeelToClient(killer, target);
                     return false;
+                case CustomRoles.Vigilante:
+                    if (killer.Is(CustomRoles.Madmate)) break;
+                    if (target.GetCustomRole().IsCrewmate())
+                    {
+                        killer.RpcSetCustomRole(CustomRoles.Madmate);
+                        Utils.NotifyRoles();
+                        Utils.MarkEveryoneDirtySettings();
+                        killer.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Madmate), GetString("VigilanteNotify")));
+                    }
+                    break;
                 case CustomRoles.Pursuer:
                     if (target.Is(CustomRoles.NSerialKiller)) return true;
                     if (Pursuer.CanBeClient(target) && Pursuer.CanSeel(killer.PlayerId))
@@ -535,19 +571,24 @@ class CheckMurderPatch
             }
         }
 
-        // 击杀前检查
         if (!killer.RpcCheckAndMurder(target, true))
             return false;
-        if (Merchant.OnClientMurder(killer, target)) return false;
 
+        if (Merchant.OnClientMurder(killer, target))
+            return false;
 
-        if (killer.Is(CustomRoles.Virus)) Virus.OnCheckMurder(killer, target);
-        else if (killer.Is(CustomRoles.Spiritcaller)) Spiritcaller.OnCheckMurder(target);
+        if (killerRole.Is(CustomRoles.Virus))
+        {
+            Virus.OnCheckMurder(killer, target);
+        }
+        else if (killerRole.Is(CustomRoles.Spiritcaller))
+        {
+            Spiritcaller.OnCheckMurder(target);
+        }
 
         // Consigliere
         if (killer.Is(CustomRoles.EvilDiviner))
         {
-            
             if (!EvilDiviner.OnCheckMurder(killer, target))
                 return false;
         }
@@ -570,17 +611,6 @@ class CheckMurderPatch
                 Main.AllPlayerKillCooldown[killer.PlayerId] = KillCD;
             }
         }
-
-
-        if (killer.Is(CustomRoles.Swift)&& !target.Is(CustomRoles.Pestilence))
-        {
-            target.RpcMurderPlayerV3(target);
-            if (!Options.DisableShieldAnimations.GetBool()) killer.RpcGuardAndKill(killer);
-            killer.SetKillCooldown();
-            target.SetRealKiller(killer);
-            RPC.PlaySoundRPC(killer.PlayerId, Sounds.KillSound);
-                return false;
-        }
         if (killer.Is(CustomRoles.BoobyTrap))
         {
             Main.BoobyTrapBody.Add(target.PlayerId);
@@ -592,30 +622,29 @@ class CheckMurderPatch
             {
                 killer.RpcGuardAndKill(killer);
                 killer.SetKillCooldown();
-                    return false;
+                return false;
             }
         }
-    /*    if (killer.Is(CustomRoles.Werewolf) && !target.Is(CustomRoles.Glitch) && !target.Is(CustomRoles.Pestilence))
-        {
-                Main.AllPlayerKillCooldown[killer.PlayerId] = Werewolf.KillCooldownAfterKilling.GetFloat();
-                Main.PlayerStates[target.PlayerId].deathReason = PlayerState.DeathReason.Mauled;
-        //    RPC.PlaySoundRPC(killer.PlayerId, Sounds.KillSound);
-        } */
 
+        if (killer.Is(CustomRoles.Swift) && !target.Is(CustomRoles.Pestilence))
+        {
+            target.RpcMurderPlayerV3(target);
+            if (!Options.DisableShieldAnimations.GetBool()) killer.RpcGuardAndKill(killer);
+            killer.SetKillCooldown();
+            target.SetRealKiller(killer);
+            RPC.PlaySoundRPC(killer.PlayerId, Sounds.KillSound);
+            return false;
+        }
 
 
         if (killer.Is(CustomRoles.Mare) && !Utils.IsActive(SystemTypes.Electrical))
         {
             return false;
         }
-   /*     if (killer.Is(CustomRoles.Minimalism))
-        {
-            return true;
-        } */
 
         if (killer.Is(CustomRoles.PotionMaster))
         {
-            
+
             if (!PotionMaster.OnCheckMurder(killer, target))
                 return false;
         }
@@ -649,7 +678,7 @@ class CheckMurderPatch
             _ = new LateTask(() =>
             {
                 if (!Main.OverDeadPlayerList.Contains(target.PlayerId)) Main.OverDeadPlayerList.Add(target.PlayerId);
-                var ops = target.transform.position;
+                var ops = target.GetTruePosition();
                 var rd = IRandom.Instance;
                 for (int i = 0; i < 20; i++)
                 {
@@ -681,37 +710,37 @@ class CheckMurderPatch
             }, 0.05f, "OverKiller Murder");
         }
 
-        if (killer.Is(CustomRoles.Cultivator))
+        if (killer.Is(CustomRoles.Berserker))
         {
-            if (Main.CultivatorKillMax[killer.PlayerId] < Options.CultivatorMax.GetInt())
+            if (Main.BerserkerKillMax[killer.PlayerId] < Options.BerserkerMax.GetInt())
             {
-                Main.CultivatorKillMax[killer.PlayerId]++;
-                killer.Notify(string.Format(GetString("CultivatorLevelChanged"), Main.CultivatorKillMax[killer.PlayerId]));
-                Logger.Info($"Increased the lvl to {Main.CultivatorKillMax[killer.PlayerId]}", "CULTIVATOR");
+                Main.BerserkerKillMax[killer.PlayerId]++;
+                killer.Notify(string.Format(GetString("BerserkerLevelChanged"), Main.BerserkerKillMax[killer.PlayerId]));
+                Logger.Info($"Increased the lvl to {Main.BerserkerKillMax[killer.PlayerId]}", "CULTIVATOR");
             }
             else
             {
-                killer.Notify(GetString("CultivatorMaxReached"));
-                Logger.Info($"Max level reached lvl =  {Main.CultivatorKillMax[killer.PlayerId]}", "CULTIVATOR");
+                killer.Notify(GetString("BerserkerMaxReached"));
+                Logger.Info($"Max level reached lvl =  {Main.BerserkerKillMax[killer.PlayerId]}", "CULTIVATOR");
 
             }
-            if (Main.CultivatorKillMax[killer.PlayerId] >= Options.CultivatorKillCooldownLevel.GetInt() && Options.CultivatorOneCanKillCooldown.GetBool())
+            if (Main.BerserkerKillMax[killer.PlayerId] >= Options.BerserkerKillCooldownLevel.GetInt() && Options.BerserkerOneCanKillCooldown.GetBool())
             {
-                Main.AllPlayerKillCooldown[killer.PlayerId] = Options.CultivatorOneKillCooldown.GetFloat();
+                Main.AllPlayerKillCooldown[killer.PlayerId] = Options.BerserkerOneKillCooldown.GetFloat();
             }
-            if (Main.CultivatorKillMax[killer.PlayerId] == Options.CultivatorScavengerLevel.GetInt() && Options.CultivatorTwoCanScavenger.GetBool())
+            if (Main.BerserkerKillMax[killer.PlayerId] == Options.BerserkerScavengerLevel.GetInt() && Options.BerserkerTwoCanScavenger.GetBool())
             {
-                killer.RpcTeleport(target.transform.position);
+                killer.RpcTeleport(target.GetTruePosition());
                 RPC.PlaySoundRPC(killer.PlayerId, Sounds.KillSound);
                 target.RpcTeleport(new Vector2(Pelican.GetBlackRoomPS().x, Pelican.GetBlackRoomPS().y));
                 target.SetRealKiller(killer);
                 Main.PlayerStates[target.PlayerId].SetDead();
                 target.RpcMurderPlayerV3(target);
                 killer.SetKillCooldownV2();
-                NameNotifyManager.Notify(target, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Cultivator), GetString("KilledByCultivator")));
+                NameNotifyManager.Notify(target, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Berserker), GetString("KilledByBerserker")));
                 return false;
             }
-            if (Main.CultivatorKillMax[killer.PlayerId] >= Options.CultivatorBomberLevel.GetInt() && Options.CultivatorThreeCanBomber.GetBool())
+            if (Main.BerserkerKillMax[killer.PlayerId] >= Options.BerserkerBomberLevel.GetInt() && Options.BerserkerThreeCanBomber.GetBool())
             {
                 Logger.Info("炸弹爆炸了", "Boom");
                 CustomSoundsManager.RPCPlayCustomSoundAll("Boom");
@@ -728,36 +757,35 @@ class CheckMurderPatch
                     }
                 }
             }
-            //if (Main.CultivatorKillMax[killer.PlayerId] == 4 && Options.CultivatorFourCanFlash.GetBool())
+            //if (Main.BerserkerKillMax[killer.PlayerId] == 4 && Options.BerserkerFourCanFlash.GetBool())
             //{
-            //    Main.AllPlayerSpeed[killer.PlayerId] = Options.CultivatorSpeed.GetFloat();
+            //    Main.AllPlayerSpeed[killer.PlayerId] = Options.BerserkerSpeed.GetFloat();
             //}
         }
 
-            if (killer.Is(CustomRoles.Werewolf))
+        if (killer.Is(CustomRoles.Werewolf))
+        {
+            Logger.Info("Werewolf Kill", "Mauled");
             {
-                Logger.Info("Werewolf Kill", "Mauled");
-                {
                 _ = new LateTask(() =>
+                {
+                    foreach (var player in Main.AllPlayerControls)
                     {
-                        foreach (var player in Main.AllPlayerControls)
+                        if (!player.IsAlive() || Pelican.IsEaten(player.PlayerId)) continue;
+                        if (player == killer) continue;
+                        if (player.Is(CustomRoles.NiceMini) && Mini.Age < 18) continue;
+                        if (player.Is(CustomRoles.EvilMini) && Mini.Age < 18) continue;
+                        if (player.Is(CustomRoles.Pestilence)) continue;
+                        if (Vector2.Distance(killer.transform.position, player.transform.position) <= Werewolf.MaulRadius.GetFloat())
                         {
-                            if (!player.IsAlive() || Pelican.IsEaten(player.PlayerId)) continue;
-                            if (player == killer) continue;
-                            if (player.Is(CustomRoles.NiceMini) && Mini.Age != 18) continue;
-                            if (player.Is(CustomRoles.EvilMini) && Mini.Age != 18) continue;
-                            if (player.Is(CustomRoles.Pestilence)) continue;
-                            if (Vector2.Distance(killer.transform.position, player.transform.position) <= Werewolf.MaulRadius.GetFloat())
-                                {
-                                Main.PlayerStates[player.PlayerId].deathReason = PlayerState.DeathReason.Mauled;
-                                player.SetRealKiller(killer);
-                                player.RpcMurderPlayerV3(player);
-                            }
+                            Main.PlayerStates[player.PlayerId].deathReason = PlayerState.DeathReason.Mauled;
+                            player.SetRealKiller(killer);
+                            player.RpcMurderPlayerV3(player);
                         }
-                    }, 0.1f, "Werewolf Maul Bug Fix");
-
-                }
+                    }
+                }, 0.1f, "Werewolf Maul Bug Fix");
             }
+        }
 
 
         //==キル処理==
@@ -797,7 +825,7 @@ class CheckMurderPatch
         if (Options.OppoImmuneToAttacksWhenTasksDone.GetBool())
         {
             if (target.Is(CustomRoles.Opportunist) && target.AllTasksCompleted())
-            return false;
+                return false;
         }
 
         // Monarch immune to kills when a living player is knighted
@@ -824,12 +852,10 @@ class CheckMurderPatch
             return false;
         if (killer.Is(CustomRoles.Wraith) && target.Is(CustomRoles.Wraith))
             return false;
-        if (killer.Is(CustomRoles.Shade) && target.Is(CustomRoles.Shade))
-            return false;
         if (killer.Is(CustomRoles.HexMaster) && target.Is(CustomRoles.HexMaster))
             return false;
-        if (killer.Is(CustomRoles.Occultist) && target.Is(CustomRoles.Occultist))
-            return false;
+        //if (killer.Is(CustomRoles.Occultist) && target.Is(CustomRoles.Occultist))
+        //    return false;
         if (killer.Is(CustomRoles.BloodKnight) && target.Is(CustomRoles.BloodKnight))
             return false;
         if (killer.Is(CustomRoles.Jackal) && target.Is(CustomRoles.Jackal))
@@ -911,7 +937,7 @@ class CheckMurderPatch
         }
         if (target.Is(CustomRoles.EvilMini) && Mini.Age != 18)
         {
-            killer.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.NiceMini), GetString("Cantkillkid")));
+            killer.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.EvilMini), GetString("Cantkillkid")));
             return false;
         }
         if (killer.Is(CustomRoles.EvilMini) && Mini.Age != 18)
@@ -931,11 +957,11 @@ class CheckMurderPatch
             return true;
         }
 
-    /*    if (target.Is(CustomRoles.BoobyTrap) && Options.TrapOnlyWorksOnTheBodyBoobyTrap.GetBool() && !GameStates.IsMeeting)
-        {
-            Main.BoobyTrapBody.Add(target.PlayerId);
-            Main.BoobyTrapKiller.Add(target.PlayerId);
-        } */
+        /*    if (target.Is(CustomRoles.BoobyTrap) && Options.TrapOnlyWorksOnTheBodyBoobyTrap.GetBool() && !GameStates.IsMeeting)
+            {
+                Main.BoobyTrapBody.Add(target.PlayerId);
+                Main.BoobyTrapKiller.Add(target.PlayerId);
+            } */
 
         if (target.Is(CustomRoles.Lucky))
         {
@@ -946,14 +972,14 @@ class CheckMurderPatch
                 return false;
             }
         }
-      //  if (target.Is(CustomRoles.Diseased))
-      //  {
-            
-      ////      killer.RpcGuardAndKill(killer);
-      //   //   killer.SetKillCooldownV3(Main.AllPlayerKillCooldown[killer.PlayerId] *= Options.DiseasedMultiplier.GetFloat());
-      //   //   killer.ResetKillCooldown();
-      //  //    killer.SyncSettings();
-      //  }
+        //  if (target.Is(CustomRoles.Diseased))
+        //  {
+
+        ////      killer.RpcGuardAndKill(killer);
+        //   //   killer.SetKillCooldownV3(Main.AllPlayerKillCooldown[killer.PlayerId] *= Options.DiseasedMultiplier.GetFloat());
+        //   //   killer.ResetKillCooldown();
+        //  //    killer.SyncSettings();
+        //  }
         if (Main.ForCrusade.Contains(target.PlayerId))
         {
             foreach (var player in Main.AllPlayerControls)
@@ -995,11 +1021,14 @@ class CheckMurderPatch
                 killer.RpcGuardAndKill(target);
                 target.RpcGuardAndKill(target);
                 Main.CursedWolfSpellCount[target.PlayerId] -= 1;
-                killer.SetRealKiller(target);
                 RPC.SendRPCCursedWolfSpellCount(target.PlayerId);
-                Logger.Info($"{target.GetNameWithRole()} : {Main.CursedWolfSpellCount[target.PlayerId]}回目", "CursedWolf");
-                Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Curse;
-                killer.RpcMurderPlayerV3(killer);
+                if (Options.killAttacker.GetBool())
+                {
+                    killer.SetRealKiller(target);
+                    Logger.Info($"{target.GetNameWithRole()} : {Main.CursedWolfSpellCount[target.PlayerId]}回目", "CursedWolf");
+                    Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Curse;
+                    killer.RpcMurderPlayerV3(killer);
+                }
                 return false;
             case CustomRoles.Jinx:
                 if (Main.JinxSpellCount[target.PlayerId] <= 0) break;
@@ -1008,11 +1037,14 @@ class CheckMurderPatch
                 killer.RpcGuardAndKill(target);
                 target.RpcGuardAndKill(target);
                 Main.JinxSpellCount[target.PlayerId] -= 1;
-                killer.SetRealKiller(target);
                 RPC.SendRPCJinxSpellCount(target.PlayerId);
-                Logger.Info($"{target.GetNameWithRole()} : {Main.JinxSpellCount[target.PlayerId]}回目", "Jinx");
-                Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Jinx;
-                killer.RpcMurderPlayerV3(killer);
+                if (Jinx.killAttacker.GetBool())
+                {
+                    killer.SetRealKiller(target);
+                    Logger.Info($"{target.GetNameWithRole()} : {Main.JinxSpellCount[target.PlayerId]}回目", "Jinx");
+                    Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Jinx;
+                    killer.RpcMurderPlayerV3(killer);
+                }
                 return false;
             //击杀老兵
             case CustomRoles.Veteran:
@@ -1035,35 +1067,35 @@ class CheckMurderPatch
                         }
                     }
                 break;
-    /*        case CustomRoles.NSerialKiller:
-            if (NSerialKiller.ReflectHarmfulInteractions.GetBool())
-            {
-                if (killer.Is(CustomRoles.Deputy))
-                {
-                    killer.SetRealKiller(target);
-                    target.RpcMurderPlayerV3(killer);                    
-                    Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Misfire;
-                }
-                if (killer.Is(CustomRoles.Pursuer))
-                {
-                    killer.SetRealKiller(target);
-                    target.RpcMurderPlayerV3(killer);                    
-                    Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Misfire;
-                }
-                if (killer.Is(CustomRoles.Counterfeiter))
-                {
-                    killer.SetRealKiller(target);
-                    target.RpcMurderPlayerV3(killer);                    
-                    Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Misfire;
-                }
-                if (killer.Is(CustomRoles.Infectious))
-                {
-                    killer.SetRealKiller(target);
-                    target.RpcMurderPlayerV3(killer);                    
-                    Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Misfire;
-                }
-            }
-            break; */
+            /*        case CustomRoles.NSerialKiller:
+                    if (NSerialKiller.ReflectHarmfulInteractions.GetBool())
+                    {
+                        if (killer.Is(CustomRoles.Deputy))
+                        {
+                            killer.SetRealKiller(target);
+                            target.RpcMurderPlayerV3(killer);                    
+                            Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Misfire;
+                        }
+                        if (killer.Is(CustomRoles.Pursuer))
+                        {
+                            killer.SetRealKiller(target);
+                            target.RpcMurderPlayerV3(killer);                    
+                            Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Misfire;
+                        }
+                        if (killer.Is(CustomRoles.Counterfeiter))
+                        {
+                            killer.SetRealKiller(target);
+                            target.RpcMurderPlayerV3(killer);                    
+                            Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Misfire;
+                        }
+                        if (killer.Is(CustomRoles.Infectious))
+                        {
+                            killer.SetRealKiller(target);
+                            target.RpcMurderPlayerV3(killer);                    
+                            Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Misfire;
+                        }
+                    }
+                    break; */
             case CustomRoles.TimeMaster:
                 if (Main.TimeMasterInProtect.ContainsKey(target.PlayerId) && killer.PlayerId != target.PlayerId)
                     if (Main.TimeMasterInProtect[target.PlayerId] + Options.TimeMasterSkillDuration.GetInt() >= Utils.GetTimeStamp(DateTime.UtcNow))
@@ -1084,26 +1116,32 @@ class CheckMurderPatch
                     }
                 break;
             case CustomRoles.Masochist:
-            
-                    killer.SetKillCooldown(target: target, forceAnime: true);
-                    Main.MasochistKillMax[target.PlayerId]++;
-            //    killer.RPCPlayCustomSound("DM");
+
+                killer.SetKillCooldown(target: target, forceAnime: true);
+                Main.MasochistKillMax[target.PlayerId]++;
+                //    killer.RPCPlayCustomSound("DM");
                 target.Notify(string.Format(GetString("MasochistKill"), Main.MasochistKillMax[target.PlayerId]));
-                    if (Main.MasochistKillMax[target.PlayerId] >= Options.MasochistKillMax.GetInt())
-                    {
-                        CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Masochist);
-                        CustomWinnerHolder.WinnerIds.Add(target.PlayerId);
-                    }
-                return false;
-            case CustomRoles.Cultivator:
-                if (Main.CultivatorKillMax[killer.PlayerId] >= Options.CultivatorImmortalLevel.GetInt() && Options.CultivatorFourCanNotKill.GetBool())
+                if (Main.MasochistKillMax[target.PlayerId] >= Options.MasochistKillMax.GetInt())
                 {
-                    killer.RpcTeleport(target.transform.position);
+                    CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Masochist);
+                    CustomWinnerHolder.WinnerIds.Add(target.PlayerId);
+                }
+                return false;
+            case CustomRoles.Berserker:
+                if (Main.BerserkerKillMax[target.PlayerId] >= Options.BerserkerImmortalLevel.GetInt() && Options.BerserkerFourCanNotKill.GetBool())
+                {
+                    killer.RpcTeleport(target.GetTruePosition());
                     RPC.PlaySoundRPC(killer.PlayerId, Sounds.KillSound);
                     killer.SetKillCooldown(target: target, forceAnime: true);
                     return false;
                 }
                 break;
+            //President kill
+            case CustomRoles.President:
+                if (President.CheckPresidentReveal[target.PlayerId] == true)
+                    killer.SetKillCooldown(0.9f);
+                break;
+            //return true;
             case CustomRoles.SuperStar:
                 if (Main.AllAlivePlayerControls.Where(x =>
                     x.PlayerId != killer.PlayerId &&
@@ -1119,15 +1157,6 @@ class CheckMurderPatch
             //嗜血骑士技能生效中
             case CustomRoles.BloodKnight:
                 if (BloodKnight.InProtect(target.PlayerId))
-                {
-                    killer.RpcGuardAndKill(target);
-                    if (!Options.DisableShieldAnimations.GetBool()) target.RpcGuardAndKill();
-                    target.Notify(GetString("BKOffsetKill"));
-                    return false;
-                }
-                break;
-            case CustomRoles.Banshee:
-                if (Banshee.InProtect(target.PlayerId))
                 {
                     killer.RpcGuardAndKill(target);
                     if (!Options.DisableShieldAnimations.GetBool()) target.RpcGuardAndKill();
@@ -1182,8 +1211,8 @@ class CheckMurderPatch
                     x.PlayerId != killer.PlayerId &&
                     x.PlayerId != target.PlayerId &&
                     Vector2.Distance(x.transform.position, target.transform.position) < 2f
-                    ).ToList().Count >= 1) 
-                    return false;
+                    ).ToList().Count >= 1)
+                        return false;
 
                 }
             }
@@ -1277,7 +1306,7 @@ class MurderPlayerPatch
 
         if (target.Is(CustomRoles.Bait))
         {
-            if (killer.PlayerId != target.PlayerId || (target.GetRealKiller()?.GetCustomRole() is CustomRoles.Swooper or CustomRoles.Shade or CustomRoles.Wraith) || !killer.Is(CustomRoles.Oblivious) || (killer.Is(CustomRoles.Oblivious) && !Options.ObliviousBaitImmune.GetBool()))
+            if (killer.PlayerId != target.PlayerId || (target.GetRealKiller()?.GetCustomRole() is CustomRoles.Swooper or CustomRoles.Wraith) || !killer.Is(CustomRoles.Oblivious) || (killer.Is(CustomRoles.Oblivious) && !Options.ObliviousBaitImmune.GetBool()))
             {
                 killer.RPCPlayCustomSound("Congrats");
                 target.RPCPlayCustomSound("Congrats");
@@ -1308,13 +1337,13 @@ class MurderPlayerPatch
                     else
                     {
                         RPC.PlaySoundRPC(killer.PlayerId, Sounds.TaskComplete);
-                        killer.SetKillCooldown(time : Main.AllPlayerKillCooldown[killer.PlayerId] - Options.BurstKillDelay.GetFloat(), forceAnime: true);
-                        killer.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Burst), GetString("BurstFailed")));                        
+                        killer.SetKillCooldown(time: Main.AllPlayerKillCooldown[killer.PlayerId] - Options.BurstKillDelay.GetFloat(), forceAnime: true);
+                        killer.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Burst), GetString("BurstFailed")));
                     }
                     Main.BurstBodies.Remove(target.PlayerId);
                 }, Options.BurstKillDelay.GetFloat(), "Burst Suicide");
             }
-        } 
+        }
 
 
         if (target.Is(CustomRoles.Trapper) && killer != target)
@@ -1332,24 +1361,21 @@ class MurderPlayerPatch
         }
         switch (killer.GetCustomRole())
         {
-        /*    case CustomRoles.BoobyTrap:
-                if (!Options.TrapOnlyWorksOnTheBodyBoobyTrap.GetBool() && killer != target)
-                {
-                    if (!Main.BoobyTrapBody.Contains(target.PlayerId)) Main.BoobyTrapBody.Add(target.PlayerId);
-                    if (!Main.KillerOfBoobyTrapBody.ContainsKey(target.PlayerId)) Main.KillerOfBoobyTrapBody.Add(target.PlayerId, killer.PlayerId);
-                    Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Misfire;
-                    killer.RpcMurderPlayerV3(killer);
-                }
-                break; */
+            /*    case CustomRoles.BoobyTrap:
+                    if (!Options.TrapOnlyWorksOnTheBodyBoobyTrap.GetBool() && killer != target)
+                    {
+                        if (!Main.BoobyTrapBody.Contains(target.PlayerId)) Main.BoobyTrapBody.Add(target.PlayerId);
+                        if (!Main.KillerOfBoobyTrapBody.ContainsKey(target.PlayerId)) Main.KillerOfBoobyTrapBody.Add(target.PlayerId, killer.PlayerId);
+                        Main.PlayerStates[killer.PlayerId].deathReason = PlayerState.DeathReason.Misfire;
+                        killer.RpcMurderPlayerV3(killer);
+                    }
+                    break; */
             case CustomRoles.SwordsMan:
                 if (killer != target)
                     SwordsMan.OnMurder(killer);
                 break;
             case CustomRoles.BloodKnight:
                 BloodKnight.OnMurderPlayer(killer, target);
-                break;
-            case CustomRoles.Banshee:
-                Banshee.OnMurderPlayer(killer, target);
                 break;
             case CustomRoles.Wildling:
                 Wildling.OnMurderPlayer(killer, target);
@@ -1358,7 +1384,7 @@ class MurderPlayerPatch
 
         if (killer.Is(CustomRoles.TicketsStealer) && killer.PlayerId != target.PlayerId)
             killer.Notify(string.Format(GetString("TicketsStealerGetTicket"), ((Main.AllPlayerControls.Count(x => x.GetRealKiller()?.PlayerId == killer.PlayerId) + 1) * Options.TicketsPerKill.GetFloat()).ToString("0.0#####")));
-        
+
         if (killer.Is(CustomRoles.Pickpocket) && killer.PlayerId != target.PlayerId)
             killer.Notify(string.Format(GetString("PickpocketGetVote"), ((Main.AllPlayerControls.Count(x => x.GetRealKiller()?.PlayerId == killer.PlayerId) + 1) * Pickpocket.VotesPerKill.GetFloat()).ToString("0.0#####")));
 
@@ -1512,7 +1538,7 @@ class ShapeshiftPatch
                         }
                         else
                         {
-                            Main.EscapeeLocation.Add(shapeshifter.PlayerId, new Vector2(shapeshifter.transform.position.x, shapeshifter.transform.position.y));
+                            Main.EscapeeLocation.Add(shapeshifter.PlayerId, shapeshifter.GetTruePosition());
                         }
                     }
                     break;
@@ -1608,8 +1634,8 @@ class ShapeshiftPatch
                         {
                             if (!(!GameStates.IsInTask || !shapeshifter.IsAlive() || !target.IsAlive() || shapeshifter.inVent || target.inVent))
                             {
-                                var originPs = target.transform.position;
-                                target.RpcTeleport(shapeshifter.transform.position);
+                                var originPs = target.GetTruePosition();
+                                target.RpcTeleport(shapeshifter.GetTruePosition());
                                 shapeshifter.RpcTeleport(originPs);
                             }
                         }, 1.5f, "ImperiusCurse TP");
@@ -1660,7 +1686,7 @@ class ShapeshiftPatch
                         }
                         Blackmailer.ForBlackmailer.Add(target.PlayerId);
                     }
-                break;
+                    break;
             }
         }
 
@@ -1732,6 +1758,7 @@ class ReportDeadBodyPatch
                         ))) return false;
             }
 
+            if (Deathpact.IsEnable && !Deathpact.PlayersInDeathpactCanCallMeeting.GetBool() && Deathpact.IsInActiveDeathpact(__instance)) return false;
 
             if (target == null) //拍灯事件
             {
@@ -1752,7 +1779,7 @@ class ReportDeadBodyPatch
                     {
                         __instance.Notify(GetString("BloodhoundNoTrack"));
                     }
-                    
+
                     return false;
                 }
                 if (Vulture.UnreportablePlayers.Contains(target.PlayerId)) return false;
@@ -1771,8 +1798,8 @@ class ReportDeadBodyPatch
                         {
                             _ = new LateTask(() =>
                             {
-                                if (GameStates.IsInTask) 
-                                { 
+                                if (GameStates.IsInTask)
+                                {
                                     if (!Options.DisableShieldAnimations.GetBool()) __instance.RpcGuardAndKill(__instance);
                                     __instance.Notify(GetString("VultureCooldownUp"));
                                 }
@@ -1792,7 +1819,7 @@ class ReportDeadBodyPatch
                     Main.CleanerBodies.Add(target.PlayerId);
                     __instance.RpcGuardAndKill(__instance);
                     __instance.Notify(GetString("CleanerCleanBody"));
-              //      __instance.ResetKillCooldown();
+                    //      __instance.ResetKillCooldown();
                     __instance.SetKillCooldownV3(Options.KillCooldownAfterCleaning.GetFloat());
                     Logger.Info($"{__instance.GetRealName()} 清理了 {target.PlayerName} 的尸体", "Cleaner");
                     return false;
@@ -1803,7 +1830,7 @@ class ReportDeadBodyPatch
                     Main.MedusaBodies.Add(target.PlayerId);
                     __instance.RpcGuardAndKill(__instance);
                     __instance.Notify(GetString("MedusaStoneBody"));
-              //      __instance.ResetKillCooldown();
+                    //      __instance.ResetKillCooldown();
                     __instance.SetKillCooldownV3(Medusa.KillCooldownAfterStoneGazing.GetFloat());
                     Logger.Info($"{__instance.GetRealName()} stoned {target.PlayerName} body", "Medusa");
                     return false;
@@ -1828,7 +1855,7 @@ class ReportDeadBodyPatch
                     if (!tpc.Is(CustomRoles.Bait) || (tpc.Is(CustomRoles.Bait) && Options.ObliviousBaitImmune.GetBool())) /* && (target?.Object != null)*/
                     {
                         return false;
-                    } 
+                    }
                 }
 
                 var tar = Utils.GetPlayerById(target.PlayerId);
@@ -1840,14 +1867,6 @@ class ReportDeadBodyPatch
                         __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
                         tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
                     }
-
-                /*    if (tar.GetCustomRole().IsCoven())
-                    {
-                        __instance.RpcSetCustomRole(CustomRoles.Banshee);
-                        Banshee.Add(__instance.PlayerId);
-                        __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
-                        tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
-                    } */
 
                     if (tar.GetCustomRole().IsMadmate() || tar.Is(CustomRoles.Madmate))
                     {
@@ -1995,7 +2014,7 @@ class ReportDeadBodyPatch
 
                     if (tar.GetCustomRole().IsAmneNK())
                     {
-                    //    Sheriff.Add(__instance.PlayerId);
+                        //    Sheriff.Add(__instance.PlayerId);
                         __instance.RpcSetCustomRole(tar.GetCustomRole());
                         __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
                         tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
@@ -2005,45 +2024,45 @@ class ReportDeadBodyPatch
                     {
                         if (Amnesiac.IncompatibleNeutralMode.GetValue() == 0)
                         {
-                        Amnesiac.Add(__instance.PlayerId);
-                        __instance.RpcSetCustomRole(CustomRoles.Amnesiac);
-                        __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
-                        tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
+                            Amnesiac.Add(__instance.PlayerId);
+                            __instance.RpcSetCustomRole(CustomRoles.Amnesiac);
+                            __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
+                            tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
                         }
                         if (Amnesiac.IncompatibleNeutralMode.GetValue() == 1)
                         {
-                        NWitch.Add(__instance.PlayerId);
-                        __instance.RpcSetCustomRole(CustomRoles.NWitch);
-                        __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
-                        tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
+                            NWitch.Add(__instance.PlayerId);
+                            __instance.RpcSetCustomRole(CustomRoles.NWitch);
+                            __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
+                            tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
                         }
                         if (Amnesiac.IncompatibleNeutralMode.GetValue() == 2)
                         {
-                        Pursuer.Add(__instance.PlayerId);
-                        __instance.RpcSetCustomRole(CustomRoles.Pursuer);
-                        __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
-                        tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
+                            Pursuer.Add(__instance.PlayerId);
+                            __instance.RpcSetCustomRole(CustomRoles.Pursuer);
+                            __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
+                            tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
                         }
                         if (Amnesiac.IncompatibleNeutralMode.GetValue() == 3)
                         {
-                        Totocalcio.Add(__instance.PlayerId);
-                        __instance.RpcSetCustomRole(CustomRoles.Totocalcio);
-                        __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
-                        tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
+                            Totocalcio.Add(__instance.PlayerId);
+                            __instance.RpcSetCustomRole(CustomRoles.Totocalcio);
+                            __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
+                            tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
                         }
                         if (Amnesiac.IncompatibleNeutralMode.GetValue() == 4)
                         {
-                        Maverick.Add(__instance.PlayerId);
-                        __instance.RpcSetCustomRole(CustomRoles.Maverick);
-                        __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
-                        tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
+                            Maverick.Add(__instance.PlayerId);
+                            __instance.RpcSetCustomRole(CustomRoles.Maverick);
+                            __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
+                            tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
                         }
                         if (Amnesiac.IncompatibleNeutralMode.GetValue() == 5)
                         {
-                        Imitator.Add(__instance.PlayerId);
-                        __instance.RpcSetCustomRole(CustomRoles.Imitator);
-                        __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
-                        tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
+                            Imitator.Add(__instance.PlayerId);
+                            __instance.RpcSetCustomRole(CustomRoles.Imitator);
+                            __instance.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("YouRememberedRole")));
+                            tar.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Amnesiac), GetString("RememberedYourRole")));
                         }
                     }
 
@@ -2072,7 +2091,7 @@ class ReportDeadBodyPatch
                     }
 
 
-                        return false;
+                    return false;
                 }
 
                 if (__instance.Is(CustomRoles.Unlucky) && (target?.Object == null || !target.Object.Is(CustomRoles.Bait)))
@@ -2084,42 +2103,42 @@ class ReportDeadBodyPatch
                         Main.PlayerStates[__instance.PlayerId].deathReason = PlayerState.DeathReason.Suicide;
                         return false;
                     }
-                }   
+                }
 
                 if (target.Object.Is(CustomRoles.BoobyTrap) && Options.TrapTrapsterBody.GetBool() && !__instance.Is(CustomRoles.Pestilence))
-                    {
-                        var killerID = target.PlayerId;
-                        Main.PlayerStates[__instance.PlayerId].deathReason = PlayerState.DeathReason.Trap;
-                        __instance.SetRealKiller(Utils.GetPlayerById(killerID));
+                {
+                    var killerID = target.PlayerId;
+                    Main.PlayerStates[__instance.PlayerId].deathReason = PlayerState.DeathReason.Trap;
+                    __instance.SetRealKiller(Utils.GetPlayerById(killerID));
 
-                        __instance.RpcMurderPlayerV3(__instance);
-                        RPC.PlaySoundRPC(killerID, Sounds.KillSound);
-                        if (Options.TrapConsecutiveTrapsterBodies.GetBool())
-                        {
-                            Main.BoobyTrapBody.Add(__instance.PlayerId);
-                        }
-                        return false;
-                    } 
+                    __instance.RpcMurderPlayerV3(__instance);
+                    RPC.PlaySoundRPC(killerID, Sounds.KillSound);
+                    if (Options.TrapConsecutiveTrapsterBodies.GetBool())
+                    {
+                        Main.BoobyTrapBody.Add(__instance.PlayerId);
+                    }
+                    return false;
+                }
 
 
 
                 // 报告了诡雷尸体
                 if (Main.BoobyTrapBody.Contains(target.PlayerId) && __instance.IsAlive() && !__instance.Is(CustomRoles.Pestilence))
                 {
-                /*    if (!Options.TrapOnlyWorksOnTheBodyBoobyTrap.GetBool())
-                    {
-                        var killerID = Main.KillerOfBoobyTrapBody[target.PlayerId];
-                        Main.PlayerStates[__instance.PlayerId].deathReason = PlayerState.DeathReason.Bombed;
-                        __instance.SetRealKiller(Utils.GetPlayerById(killerID));
+                    /*    if (!Options.TrapOnlyWorksOnTheBodyBoobyTrap.GetBool())
+                        {
+                            var killerID = Main.KillerOfBoobyTrapBody[target.PlayerId];
+                            Main.PlayerStates[__instance.PlayerId].deathReason = PlayerState.DeathReason.Bombed;
+                            __instance.SetRealKiller(Utils.GetPlayerById(killerID));
 
-                        __instance.RpcMurderPlayerV3(__instance);
-                        RPC.PlaySoundRPC(killerID, Sounds.KillSound);
+                            __instance.RpcMurderPlayerV3(__instance);
+                            RPC.PlaySoundRPC(killerID, Sounds.KillSound);
 
-                        if (!Main.BoobyTrapBody.Contains(__instance.PlayerId)) Main.BoobyTrapBody.Add(__instance.PlayerId);
-                        if (!Main.KillerOfBoobyTrapBody.ContainsKey(__instance.PlayerId)) Main.KillerOfBoobyTrapBody.Add(__instance.PlayerId, killerID);
-                        return false;
-                    }
-                    else */
+                            if (!Main.BoobyTrapBody.Contains(__instance.PlayerId)) Main.BoobyTrapBody.Add(__instance.PlayerId);
+                            if (!Main.KillerOfBoobyTrapBody.ContainsKey(__instance.PlayerId)) Main.KillerOfBoobyTrapBody.Add(__instance.PlayerId, killerID);
+                            return false;
+                        }
+                        else */
                     {
                         var killerID2 = target.PlayerId;
                         Main.PlayerStates[__instance.PlayerId].deathReason = PlayerState.DeathReason.Trap;
@@ -2132,7 +2151,7 @@ class ReportDeadBodyPatch
                             Main.BoobyTrapBody.Add(__instance.PlayerId);
                         }
                         return false;
-                    } 
+                    }
                 }
 
                 if (target.Object.Is(CustomRoles.Unreportable)) return false;
@@ -2214,65 +2233,64 @@ class ReportDeadBodyPatch
 
         Main.LastVotedPlayerInfo = null;
         Main.ArsonistTimer.Clear();
-        Main.FarseerTimer.Clear();
         Main.GuesserGuessed.Clear();
         Main.VeteranInProtect.Clear();
         Main.GrenadierBlinding.Clear();
-        if (Options.BombsClearAfterMeeting.GetBool()) 
-        {
-            Main.BombedVents.Clear();
-        }
         Main.MadGrenadierBlinding.Clear();
         Main.Lighter.Clear();
         Main.AllKillers.Clear();
-        Divinator.didVote.Clear();
-        Oracle.didVote.Clear();
-        Bloodhound.Clear();
-        Vulture.Clear();
         Main.GodfatherTarget.Clear();
 
-        Camouflager.OnReportDeadBody();
-        Psychic.OnReportDeadBody();
-        BountyHunter.OnReportDeadBody();
+        if (Options.BombsClearAfterMeeting.GetBool())
+        {
+            Main.BombedVents.Clear();
+        }
+
+        if (Camouflager.IsEnable) Camouflager.OnReportDeadBody();
+        if (Reverie.IsEnable) Reverie.OnReportDeadBody();
+        if (Psychic.IsEnable) Psychic.OnReportDeadBody();
+        if (BountyHunter.IsEnable) BountyHunter.OnReportDeadBody();
         if (Huntsman.IsEnable) Huntsman.OnReportDeadBody();
-        SerialKiller.OnReportDeadBody();
-        SoulCollector.OnReportDeadBody();
-        Puppeteer.OnReportDeadBody();
-        Sniper.OnReportDeadBody();
-        Undertaker.OnReportDeadBody();
+        if (SerialKiller.IsEnable) SerialKiller.OnReportDeadBody();
+        if (SoulCollector.IsEnable) SoulCollector.OnReportDeadBody();
+        if (Puppeteer.IsEnable) Puppeteer.OnReportDeadBody();
+        if (Sniper.IsEnable) Sniper.OnReportDeadBody();
+        if (Undertaker.IsEnable) Undertaker.OnReportDeadBody();
         if (Mastermind.IsEnable) Mastermind.OnReportDeadBody();
-        Vampire.OnStartMeeting();
-        Poisoner.OnStartMeeting();
-        Vampiress.OnStartMeeting();
-        Pelican.OnReportDeadBody();
-        Bandit.OnReportDeadBody();
-        Agitater.OnReportDeadBody();
-        Counterfeiter.OnReportDeadBody();
-        QuickShooter.OnReportDeadBody();
-        Eraser.OnReportDeadBody();
-        Hacker.OnReportDeadBody();
-        Divinator.OnReportDeadBody();
-        Judge.OnReportDeadBody();
-    //    Councillor.OnReportDeadBody();
-        Greedier.OnReportDeadBody();
-        Tracker.OnReportDeadBody();
-        Addict.OnReportDeadBody();
-        Oracle.OnReportDeadBody();
-        Deathpact.OnReportDeadBody();
-        ParityCop.OnReportDeadBody();
-        Doomsayer.OnReportDeadBody();
-        BallLightning.OnReportDeadBody();
-        CovenLeader.OnReportDeadBody();
-        NWitch.OnReportDeadBody();
-        Seeker.OnReportDeadBody();
-        Jailer.OnReportDeadBody();
-        Romantic.OnReportDeadBody();
+        if (Vampire.IsEnable) Vampire.OnStartMeeting();
+        if (Poisoner.IsEnable) Poisoner.OnStartMeeting();
+        if (Vampiress.IsEnable) Vampiress.OnStartMeeting();
+        if (Bloodhound.IsEnable) Bloodhound.Clear();
+        if (Vulture.IsEnable) Vulture.Clear();
+        if (Pelican.IsEnable) Pelican.OnReportDeadBody();
+        if (Bandit.IsEnable) Bandit.OnReportDeadBody();
+        if (Agitater.IsEnable) Agitater.OnReportDeadBody();
+        if (Counterfeiter.IsEnable) Counterfeiter.OnReportDeadBody();
+        if (QuickShooter.IsEnable) QuickShooter.OnReportDeadBody();
+        if (Eraser.IsEnable) Eraser.OnReportDeadBody();
+        if (Hacker.IsEnable) Hacker.OnReportDeadBody();
+        if (Divinator.IsEnable) Divinator.OnReportDeadBody();
+        if (Tracefinder.IsEnable) Tracefinder.OnReportDeadBody();
+        if (Judge.IsEnable) Judge.OnReportDeadBody();
+        if (Greedier.IsEnable) Greedier.OnReportDeadBody();
+        if (Tracker.IsEnable) Tracker.OnReportDeadBody();
+        if (Addict.IsEnable) Addict.OnReportDeadBody();
+        if (Oracle.IsEnable) Oracle.OnReportDeadBody();
+        if (Deathpact.IsEnable) Deathpact.OnReportDeadBody();
+        if (ParityCop.IsEnable) ParityCop.OnReportDeadBody();
+        if (Doomsayer.IsEnable) Doomsayer.OnReportDeadBody();
+        if (BallLightning.IsEnable) BallLightning.OnReportDeadBody();
+        if (NWitch.IsEnable) NWitch.OnReportDeadBody();
+        if (Seeker.IsEnable) Seeker.OnReportDeadBody();
+        if (Jailer.IsEnable) Jailer.OnReportDeadBody();
+        if (Romantic.IsEnable) Romantic.OnReportDeadBody();
 
 
-        Mortician.OnReportDeadBody(player, target);
-        Tracefinder.OnReportDeadBody(player, target);
-        Mediumshiper.OnReportDeadBody(target);
-        Spiritualist.OnReportDeadBody(target);
+        // if (Councillor.IsEnable) Councillor.OnReportDeadBody();
+
+        if (Mortician.IsEnable) Mortician.OnReportDeadBody(player, target);
+        if (Mediumshiper.IsEnable) Mediumshiper.OnReportDeadBody(target);
+        if (Spiritualist.IsEnable) Spiritualist.OnReportDeadBody(target);
 
         foreach (var pid in Main.AwareInteracted.Keys)
         {
@@ -2329,15 +2347,15 @@ class FixedUpdatePatch
     private static long LastFixedUpdate = new();
     private static StringBuilder Mark = new(20);
     private static StringBuilder Suffix = new(120);
-    private static int LevelKickBufferTime = 10;
-    private static Dictionary<byte, int> BufferTime = new();
+    private static int LevelKickBufferTime = 20;
+    private static Dictionary<int, int> BufferTime = new();
 
     private static bool CheckAllowList(string friendcode)
     {
         var allowListFilePath = @"./TOHE-DATA/WhiteList.txt";
         if (!File.Exists(allowListFilePath)) File.Create(allowListFilePath).Close();
         var friendcodes = File.ReadAllLines(allowListFilePath);
-        return friendcodes.Contains(friendcode);
+        return friendcodes.Any(x => x == friendcode || x.Contains(friendcode));
     }
     public static void Postfix(PlayerControl __instance)
     {
@@ -2348,16 +2366,32 @@ class FixedUpdatePatch
         bool lowLoad = false;
         if (Options.LowLoadMode.GetBool())
         {
-            BufferTime.TryAdd(player.PlayerId, 10);
-            BufferTime[player.PlayerId]--;
-            if (BufferTime[player.PlayerId] > 0) lowLoad = true;
-            else BufferTime[player.PlayerId] = 10;
+            if (!BufferTime.TryGetValue(player.PlayerId, out var timerLowLoad))
+            {
+                BufferTime.TryAdd(player.PlayerId, 10);
+                timerLowLoad = 10;
+            }
+
+            timerLowLoad--;
+
+            if (timerLowLoad > 0)
+            {
+                lowLoad = true;
+            }
+            else
+            {
+                timerLowLoad = 10;
+            }
+
+            BufferTime[player.PlayerId] = timerLowLoad;
         }
 
-        Sniper.OnFixedUpdate(player);
-        Zoom.OnFixedUpdate();
+        if (Sniper.IsEnable)
+            Sniper.OnFixedUpdate(player);
+
         if (!lowLoad)
         {
+            Zoom.OnFixedUpdate();
             NameNotifyManager.OnFixedUpdate(player);
             TargetArrow.OnFixedUpdate(player);
             LocateArrow.OnFixedUpdate(player);
@@ -2368,484 +2402,527 @@ class FixedUpdatePatch
         {
             if (GameStates.IsLobby)
             {
-                if (((ModUpdater.hasUpdate && ModUpdater.forceUpdate) || ModUpdater.isBroken || !Main.AllowPublicRoom || !VersionChecker.IsSupported) && AmongUsClient.Instance.IsGamePublic)
-                    AmongUsClient.Instance.ChangeGamePublic(false);
-
-                bool PlayerinAllowList = false;
-                if (Options.ApplyAllowList.GetBool())
-                    PlayerinAllowList = CheckAllowList(player.FriendCode);
-                else
-                    PlayerinAllowList = false;
-                if (!PlayerinAllowList)
+                bool shouldChangeGamePublic = (ModUpdater.hasUpdate && ModUpdater.forceUpdate) || ModUpdater.isBroken || !Main.AllowPublicRoom || !VersionChecker.IsSupported;
+                if (shouldChangeGamePublic && AmongUsClient.Instance.IsGamePublic)
                 {
-                    //踢出低等级的人
-                    if (!lowLoad && !player.AmOwner && Options.KickLowLevelPlayer.GetInt() != 0 && (
-                        (player.Data.PlayerLevel != 0 && player.Data.PlayerLevel < Options.KickLowLevelPlayer.GetInt()) ||
-                        player.Data.FriendCode == ""
-                        ))
+                    AmongUsClient.Instance.ChangeGamePublic(false);
+                }
+
+                bool playerInAllowList = false;
+                if (Options.ApplyAllowList.GetBool())
+                {
+                    playerInAllowList = CheckAllowList(player.Data.FriendCode);
+                }
+
+                if (!playerInAllowList)
+                {
+                    bool shouldKickLowLevelPlayer = !lowLoad && !player.AmOwner && Options.KickLowLevelPlayer.GetInt() != 0 && player.Data.PlayerLevel != 0 && player.Data.PlayerLevel < Options.KickLowLevelPlayer.GetInt();
+
+                    if (shouldKickLowLevelPlayer)
                     {
                         LevelKickBufferTime--;
+
                         if (LevelKickBufferTime <= 0)
                         {
                             LevelKickBufferTime = 20;
                             AmongUsClient.Instance.KickPlayer(player.GetClientId(), false);
                             string msg = string.Format(GetString("KickBecauseLowLevel"), player.GetRealName().RemoveHtmlTags());
                             Logger.SendInGame(msg);
-                            Logger.Info(msg, "LowLevel Kick");
+                            Logger.Info(msg, "Low Level Kick");
                         }
                     }
                 }
             }
 
-        if (GameStates.IsInTask && ReportDeadBodyPatch.CanReport[__instance.PlayerId] && ReportDeadBodyPatch.WaitReport[__instance.PlayerId].Any())
-        {
-            if (Glitch.hackedIdList.ContainsKey(__instance.PlayerId))
-            {
-                __instance.Notify(string.Format(GetString("HackedByGlitch"), GetString("GlitchReport")));
-                Logger.Info("Dead Body Report Blocked (player is hacked by Glitch)", "FixedUpdate.ReportDeadBody");
-                ReportDeadBodyPatch.WaitReport[__instance.PlayerId].Clear();
-            }
-            else
-            {
-                var info = ReportDeadBodyPatch.WaitReport[__instance.PlayerId][0];
-                ReportDeadBodyPatch.WaitReport[__instance.PlayerId].Clear();
-                Logger.Info($"{__instance.GetNameWithRole()}:通報可能になったため通報処理を行います", "ReportDeadbody");
-                __instance.ReportDeadBody(info);
-            }
-        }
+            if (DoubleTrigger.FirstTriggerTimer.Any())
+                DoubleTrigger.OnFixedUpdate(player);
 
-            DoubleTrigger.OnFixedUpdate(player);
-            Vampire.OnFixedUpdate(player);
-            Vampiress.OnFixedUpdate(player);
-            Poisoner.OnFixedUpdate(player);
-            BountyHunter.FixedUpdate(player);
-            if (player.Is(CustomRoles.Glitch) && !lowLoad) Glitch.UpdateHackCooldown(player);
-            if (player.Is(CustomRoles.Mastermind) && !lowLoad) Mastermind.OnFixedUpdate();
-            Seeker.FixedUpdate(player);
-            SerialKiller.FixedUpdate(player);
-            
-            if (PlagueBearer.IsEnable && GameStates.IsInTask)
-                if (player.Is(CustomRoles.PlagueBearer) && PlagueBearer.IsPlaguedAll(player))
-                {
-                    player.RpcSetCustomRole(CustomRoles.Pestilence);
-                    player.Notify(GetString("PlagueBearerToPestilence"));
-                    player.RpcGuardAndKill(player);
-                    if (!PlagueBearer.PestilenceList.Contains(player.PlayerId))
-                        PlagueBearer.PestilenceList.Add(player.PlayerId);
-                    PlagueBearer.SetKillCooldownPestilence(player.PlayerId);
-                    PlagueBearer.playerIdList.Remove(player.PlayerId);
-                }
+            var playerRole = player.GetCustomRole();
 
-            if (Agitater.IsEnable && GameStates.IsInTask && Agitater.AgitaterHasBombed && Agitater.CurrentBombedPlayer == player.PlayerId)
+            if (GameStates.IsInTask)
             {
-                if (!player.IsAlive())
+                if (ReportDeadBodyPatch.CanReport[__instance.PlayerId] && ReportDeadBodyPatch.WaitReport[__instance.PlayerId].Any())
                 {
-                    Agitater.ResetBomb();
-                }
-                else
-                {
-                    Vector2 bloodlustPos = player.transform.position;
-                    Dictionary<byte, float> targetDistance = new();
-                    float dis;
-                    foreach (var target in PlayerControl.AllPlayerControls)
+                    if (Glitch.hackedIdList.ContainsKey(__instance.PlayerId))
                     {
-                        if (!target.IsAlive()) continue;
-                        if (target.PlayerId != player.PlayerId && target.PlayerId != Agitater.LastBombedPlayer && !target.Data.IsDead)
-                        {
-                            dis = Vector2.Distance(bloodlustPos, target.transform.position);
-                            targetDistance.Add(target.PlayerId, dis);
-                        }
-                    }
-                    if (targetDistance.Count != 0)
-                    {
-                        var min = targetDistance.OrderBy(c => c.Value).FirstOrDefault();
-                        PlayerControl target = Utils.GetPlayerById(min.Key);
-                        var KillRange = GameOptionsData.KillDistances[Mathf.Clamp(GameOptionsManager.Instance.currentNormalGameOptions.KillDistance, 0, 2)];
-                        if (min.Value <= KillRange && player.CanMove && target.CanMove)
-                            Agitater.PassBomb(player, target);
-                    }
-                }
-            }
-
-
-            #region Warlock Timer
-            if (GameStates.IsInTask && Main.WarlockTimer.ContainsKey(player.PlayerId))//処理を1秒遅らせる
-            {
-                if (player.IsAlive())
-                {
-                    if (Main.WarlockTimer[player.PlayerId] >= 1f)
-                    {
-                        player.RpcResetAbilityCooldown();
-                        Main.isCursed = false;//変身クールを１秒に変更
-                        player.SyncSettings();
-                        Main.WarlockTimer.Remove(player.PlayerId);
-                    }
-                    else Main.WarlockTimer[player.PlayerId] = Main.WarlockTimer[player.PlayerId] + Time.fixedDeltaTime;//時間をカウント
-                }
-                else
-                {
-                    Main.WarlockTimer.Remove(player.PlayerId);
-                }
-            }
-            #endregion
-
-            #region Arsonist Timer
-            if (GameStates.IsInTask && Main.ArsonistTimer.ContainsKey(player.PlayerId))//アーソニストが誰かを塗っているとき
-            {
-                if (!player.IsAlive() || Pelican.IsEaten(player.PlayerId))
-                {
-                    Main.ArsonistTimer.Remove(player.PlayerId);
-                    Utils.NotifyRoles(SpecifySeer: __instance);
-                    RPC.ResetCurrentDousingTarget(player.PlayerId);
-                }
-                else
-                {
-                    var ar_target = Main.ArsonistTimer[player.PlayerId].Item1;//塗られる人
-                    var ar_time = Main.ArsonistTimer[player.PlayerId].Item2;//塗った時間
-                    if (!ar_target.IsAlive())
-                    {
-                        Main.ArsonistTimer.Remove(player.PlayerId);
-                    }
-                    else if (ar_time >= Options.ArsonistDouseTime.GetFloat())//時間以上一緒にいて塗れた時
-                    {
-                        player.SetKillCooldown();
-                        Main.ArsonistTimer.Remove(player.PlayerId);//塗が完了したのでDictionaryから削除
-                        Main.isDoused[(player.PlayerId, ar_target.PlayerId)] = true;//塗り完了
-                        player.RpcSetDousedPlayer(ar_target, true);
-                        Utils.NotifyRoles(SpecifySeer: player);//名前変更
-                        RPC.ResetCurrentDousingTarget(player.PlayerId);
+                        __instance.Notify(string.Format(GetString("HackedByGlitch"), GetString("GlitchReport")));
+                        Logger.Info("Dead Body Report Blocked (player is hacked by Glitch)", "FixedUpdate.ReportDeadBody");
+                        ReportDeadBodyPatch.WaitReport[__instance.PlayerId].Clear();
                     }
                     else
                     {
-
-                        float range = NormalGameOptionsV07.KillDistances[Mathf.Clamp(player.Is(CustomRoles.Reach) ? 2 : Main.NormalOptions.KillDistance, 0, 2)] + 0.5f;
-                        float dis = Vector2.Distance(player.transform.position, ar_target.transform.position);//距離を出す
-                        if (dis <= range)//一定の距離にターゲットがいるならば時間をカウント
-                        {
-                            Main.ArsonistTimer[player.PlayerId] = (ar_target, ar_time + Time.fixedDeltaTime);
-                        }
-                        else//それ以外は削除
-                        {
-                            Main.ArsonistTimer.Remove(player.PlayerId);
-                            Utils.NotifyRoles(SpecifySeer: player);
-                            RPC.ResetCurrentDousingTarget(player.PlayerId);
-
-                            Logger.Info($"Canceled: {player.GetNameWithRole()}", "Arsonist");
-                        }
+                        var info = ReportDeadBodyPatch.WaitReport[__instance.PlayerId][0];
+                        ReportDeadBodyPatch.WaitReport[__instance.PlayerId].Clear();
+                        Logger.Info($"{__instance.GetNameWithRole()}: Now that it is possible to report, we will process the report", "ReportDeadbody");
+                        __instance.ReportDeadBody(info);
                     }
                 }
-            }
-            #endregion
 
-            #region Revolutionist Timer
-            if (GameStates.IsInTask && Main.RevolutionistTimer.ContainsKey(player.PlayerId))//当革命家拉拢一个玩家时
-            {
-                if (!player.IsAlive() || Pelican.IsEaten(player.PlayerId))
-                {
-                    Main.RevolutionistTimer.Remove(player.PlayerId);
-                    Utils.NotifyRoles(SpecifySeer: player);
-                    RPC.ResetCurrentDrawTarget(player.PlayerId);
-                }
-                else
-                {
-                    var rv_target = Main.RevolutionistTimer[player.PlayerId].Item1;//拉拢的人
-                    var rv_time = Main.RevolutionistTimer[player.PlayerId].Item2;//拉拢时间
-                    if (!rv_target.IsAlive())
-                    {
-                        Main.RevolutionistTimer.Remove(player.PlayerId);
-                    }
-                    else if (rv_time >= Options.RevolutionistDrawTime.GetFloat())//在一起时间超过多久
-                    {
-                        player.SetKillCooldown();
-                        Main.RevolutionistTimer.Remove(player.PlayerId);//拉拢完成从字典中删除
-                        Main.isDraw[(player.PlayerId, rv_target.PlayerId)] = true;//完成拉拢
-                        player.RpcSetDrawPlayer(rv_target, true);
-                        Utils.NotifyRoles(SpecifySeer: player);
-                        RPC.ResetCurrentDrawTarget(player.PlayerId);
-                        if (IRandom.Instance.Next(1, 100) <= Options.RevolutionistKillProbability.GetInt())
-                        {
-                            rv_target.SetRealKiller(player);
-                            Main.PlayerStates[rv_target.PlayerId].deathReason = PlayerState.DeathReason.Sacrifice;
-                            player.RpcMurderPlayerV3(rv_target);
-                            Main.PlayerStates[rv_target.PlayerId].SetDead();
-                            Logger.Info($"Revolutionist: {player.GetNameWithRole()} killed {rv_target.GetNameWithRole()}", "Revolutionist");
-                        }
-                    }
-                    else
-                    {
-                        float range = NormalGameOptionsV07.KillDistances[Mathf.Clamp(player.Is(CustomRoles.Reach) ? 2 : Main.NormalOptions.KillDistance, 0, 2)] + 0.5f;
-                        float dis = Vector2.Distance(player.transform.position, rv_target.transform.position);//超出距离
-                        if (dis <= range)//在一定距离内则计算时间
-                        {
-                            Main.RevolutionistTimer[player.PlayerId] = (rv_target, rv_time + Time.fixedDeltaTime);
-                        }
-                        else//否则删除
-                        {
-                            Main.RevolutionistTimer.Remove(player.PlayerId);
-                            Utils.NotifyRoles(SpecifySeer: __instance);
-                            RPC.ResetCurrentDrawTarget(player.PlayerId);
+                // Agitater
+                if (Agitater.IsEnable && Agitater.CurrentBombedPlayer == player.PlayerId)
+                    Agitater.OnFixedUpdate(player);
 
-                            Logger.Info($"Canceled: {__instance.GetNameWithRole()}", "Revolutionist");
-                        }
-                    }
-                }
-            }
-            if (GameStates.IsInTask && player.IsDrawDone() && player.IsAlive())
-            {
-                if (Main.RevolutionistStart.ContainsKey(player.PlayerId)) //如果存在字典
+                switch (playerRole)
                 {
-                    if (Main.RevolutionistLastTime.ContainsKey(player.PlayerId))
-                    {
-                        long nowtime = Utils.GetTimeStamp();
-                        if (Main.RevolutionistLastTime[player.PlayerId] != nowtime) Main.RevolutionistLastTime[player.PlayerId] = nowtime;
-                        int time = (int)(Main.RevolutionistLastTime[player.PlayerId] - Main.RevolutionistStart[player.PlayerId]);
-                        int countdown = Options.RevolutionistVentCountDown.GetInt() - time;
-                        Main.RevolutionistCountdown.Clear();
-                        if (countdown <= 0)//倒计时结束
+                    case CustomRoles.Vampire:
+                        Vampire.OnFixedUpdate(player);
+                        break;
+
+                    case CustomRoles.Vampiress:
+                        Vampiress.OnFixedUpdate(player);
+                        break;
+
+                    case CustomRoles.Poisoner:
+                        Poisoner.OnFixedUpdate(player);
+                        break;
+
+                    case CustomRoles.SerialKiller:
+                        SerialKiller.OnFixedUpdate(player);
+                        break;
+
+                    case CustomRoles.Seeker:
+                        Seeker.OnFixedUpdate(player);
+                        break;
+
+                    case CustomRoles.PlagueBearer:
+                        PlagueBearer.OnFixedUpdate(player);
+                        break;
+
+                    case CustomRoles.Farseer:
+                        Farseer.OnFixedUpdate(player);
+                        break;
+
+                    case CustomRoles.Addict:
+                        Addict.OnFixedUpdate(player);
+                        break;
+
+                    case CustomRoles.Deathpact:
+                        Deathpact.OnFixedUpdate(player);
+                        break;
+
+                    case CustomRoles.Warlock:
+                        if (Main.WarlockTimer.TryGetValue(player.PlayerId, out var warlockTimer))
                         {
-                            Utils.GetDrawPlayerCount(player.PlayerId, out var y);
-                            foreach (var pc in y.Where(x => x != null && x.IsAlive()))
+                            var playerId = player.PlayerId;
+                            if (player.IsAlive())
                             {
-                                pc.Data.IsDead = true;
-                                Main.PlayerStates[pc.PlayerId].deathReason = PlayerState.DeathReason.Sacrifice;
-                                pc.RpcMurderPlayerV3(pc);
-                                Main.PlayerStates[pc.PlayerId].SetDead();
-                                Utils.NotifyRoles(SpecifySeer: pc);
-                            }
-                            player.Data.IsDead = true;
-                            Main.PlayerStates[player.PlayerId].deathReason = PlayerState.DeathReason.Sacrifice;
-                            player.RpcMurderPlayerV3(player);
-                            Main.PlayerStates[player.PlayerId].SetDead();
-                        }
-                        else
-                        {
-                            Main.RevolutionistCountdown.Add(player.PlayerId, countdown);
-                        }
-                    }
-                    else
-                    {
-                        Main.RevolutionistLastTime.TryAdd(player.PlayerId, Main.RevolutionistStart[player.PlayerId]);
-                    }
-                }
-                else //如果不存在字典
-                {
-                    Main.RevolutionistStart.TryAdd(player.PlayerId, Utils.GetTimeStamp());
-                }
-            }
-            #endregion
-
-            Farseer.OnPostFix(player);
-            Addict.FixedUpdate(player);
-            Deathpact.OnFixedUpdate(player);
-
-            if (!lowLoad)
-            {
-                //检查老兵技能是否失效
-                if (GameStates.IsInTask && player.Is(CustomRoles.Veteran))
-                {
-                    if (Main.VeteranInProtect.TryGetValue(player.PlayerId, out var vtime) && vtime + Options.VeteranSkillDuration.GetInt() < Utils.GetTimeStamp())
-                    {
-                        Main.VeteranInProtect.Remove(player.PlayerId);
-                        if (!Options.DisableShieldAnimations.GetBool()) player.RpcGuardAndKill();
-                        else player.RpcResetAbilityCooldown();
-                        player.Notify(string.Format(GetString("VeteranOffGuard"), Main.VeteranNumOfUsed[player.PlayerId]));
-                    }
-                }
-
-                #region 检查迷你船员是否要增加年龄
-                if (GameStates.IsInTask && player.Is(CustomRoles.NiceMini))
-                {
-                    if (Mini.Age < 18 && player.IsAlive())
-                    {
-                        if (LastFixedUpdate == Utils.GetTimeStamp()) return;
-                        LastFixedUpdate = Utils.GetTimeStamp();
-                        Mini.GrowUpTime ++;
-                        if (Mini.GrowUpTime >= Mini.GrowUpDuration.GetInt()/18)
-                        {
-                            Mini.Age += 1;                            
-                            Mini.GrowUpTime = 0;                         
-                            player.RpcGuardAndKill();
-                            Logger.Info($"年龄增加1", "Child");
-                            if (Mini.UpDateAge.GetBool())
-                            {
-                                Mini.SendRPC();
-                                Utils.NotifyRoles();
-                            }
-                        }
-                    }
-                }
-                if (GameStates.IsInTask && player.Is(CustomRoles.EvilMini))
-                {
-                    if (Mini.Age < 18)
-                    {
-                        if (LastFixedUpdate == Utils.GetTimeStamp()) return;
-                        LastFixedUpdate = Utils.GetTimeStamp();
-                        Mini.GrowUpTime++;
-                        if (Main.EvilMiniKillcooldown[player.PlayerId] >= 1f)
-                        {
-                            Main.EvilMiniKillcooldown[player.PlayerId]--;
-
-                        }
-                        if (Mini.GrowUpTime >= Mini.GrowUpDuration.GetInt() / 18)
-                        {
-                            Main.EvilMiniKillcooldownf = Main.EvilMiniKillcooldown[player.PlayerId];
-                            Logger.Info($"记录击杀冷却{Main.EvilMiniKillcooldownf}", "Child");
-                            Main.AllPlayerKillCooldown[player.PlayerId] = Main.EvilMiniKillcooldownf;
-                            Main.EvilMiniKillcooldown[player.PlayerId] = Main.EvilMiniKillcooldownf;
-                            player.MarkDirtySettings();
-                            Mini.Age += 1;
-                            Mini.GrowUpTime = 0;
-                            Logger.Info($"年龄增加1", "Child");
-                            player.SetKillCooldown();
-
-                            if (Mini.UpDateAge.GetBool())
-                            {
-                                Mini.SendRPC();
-                                Utils.NotifyRoles();
-                            }
-                            Logger.Info($"重置击杀冷却{Main.EvilMiniKillcooldownf -1f}", "Child");
-                        }
-                    }
-                }
-                #endregion
-
-                //检查掷雷兵技能是否生效
-                if (GameStates.IsInTask && player.Is(CustomRoles.Grenadier))
-                {
-                    if (Main.GrenadierBlinding.TryGetValue(player.PlayerId, out var gtime) && gtime + Options.GrenadierSkillDuration.GetInt() < Utils.GetTimeStamp())
-                    {
-                        Main.GrenadierBlinding.Remove(player.PlayerId);
-                        if (!Options.DisableShieldAnimations.GetBool()) player.RpcGuardAndKill();
-                        else player.RpcResetAbilityCooldown();
-                        player.Notify(GetString("GrenadierSkillStop"));
-                        Utils.MarkEveryoneDirtySettings();
-                    }
-                    if (Main.MadGrenadierBlinding.TryGetValue(player.PlayerId, out var mgtime) && mgtime + Options.GrenadierSkillDuration.GetInt() < Utils.GetTimeStamp())
-                    {
-                        Main.MadGrenadierBlinding.Remove(player.PlayerId);
-                        if (!Options.DisableShieldAnimations.GetBool()) player.RpcGuardAndKill();
-                        else player.RpcResetAbilityCooldown();
-                        player.Notify(GetString("GrenadierSkillStop"));
-                        Utils.MarkEveryoneDirtySettings();
-                    }
-                }
-
-                if (GameStates.IsInTask && player.Is(CustomRoles.Lighter))
-                {
-                    if (Main.Lighter.TryGetValue(player.PlayerId, out var ltime) && ltime + Options.LighterSkillDuration.GetInt() < Utils.GetTimeStamp())
-                    {
-                        Main.Lighter.Remove(player.PlayerId);
-                        if (!Options.DisableShieldAnimations.GetBool()) player.RpcGuardAndKill();
-                        else player.RpcResetAbilityCooldown();
-                        player.Notify(GetString("LighterSkillStop"));
-                        player.MarkDirtySettings();
-                    }
-                }
-
-                //检查马里奥是否完成
-                if (GameStates.IsInTask && player.Is(CustomRoles.Mario) && Main.MarioVentCount[player.PlayerId] > Options.MarioVentNumWin.GetInt())
-                {
-                    Main.MarioVentCount[player.PlayerId] = Options.MarioVentNumWin.GetInt();
-                    CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Mario); //马里奥这个多动症赢了
-                    CustomWinnerHolder.WinnerIds.Add(player.PlayerId);
-                }
-                foreach (var mini in Main.AllPlayerControls)
-                {
-                    if (GameStates.IsInTask && mini.Is(CustomRoles.NiceMini) && Mini.Age < 18 && !mini.IsAlive())
-                    {
-                        CustomWinnerHolder.ResetAndSetWinner(CustomWinner.NiceMini);
-                    //    CustomWinnerHolder.WinnerIds.Add(mini.PlayerId); // Nice Mini does not win (Crewmates should not solo win unless Egoist)
-                    }
-                }
-
-                if (GameStates.IsInTask && player.Is(CustomRoles.Vulture) && Vulture.BodyReportCount[player.PlayerId] >= Vulture.NumberOfReportsToWin.GetInt())
-                {
-                    Vulture.BodyReportCount[player.PlayerId] = Vulture.NumberOfReportsToWin.GetInt();
-                    CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Vulture);
-                    CustomWinnerHolder.WinnerIds.Add(player.PlayerId);
-                }
-
-                if (Main.AllKillers.TryGetValue(player.PlayerId, out var ktime) && ktime + Options.WitnessTime.GetInt() < Utils.GetTimeStamp()) 
-                    Main.AllKillers.Remove(player.PlayerId);
-
-                Pelican.OnFixedUpdate();
-                BallLightning.OnFixedUpdate();
-                BloodKnight.OnFixedUpdate(player);
-                Puppeteer.OnFixedUpdate(player);
-                CovenLeader.OnFixedUpdate(player);
-                Shroud.OnFixedUpdate(player);
-                NWitch.OnFixedUpdate(player);
-                Banshee.OnFixedUpdate(player);
-                Wildling.OnFixedUpdate(player);
-                Spiritcaller.OnFixedUpdate(player);
-                Pitfall.OnFixedUpdate(player);
-                Swooper.OnFixedUpdate(player);
-                Wraith.OnFixedUpdate(player);
-                Shade.OnFixedUpdate(player);
-                Chameleon.OnFixedUpdate(player);
-            //    Alchemist.OnFixedUpdate(player);
-
-                if (GameStates.IsInTask)
-                {
-                    if (Options.LadderDeath.GetBool() && player.IsAlive()) FallFromLadder.FixedUpdate(player);
-
-                    if (GameStates.IsInGame && CustomRoles.Lovers.IsEnable()) LoversSuicide();
-
-                    if (player == PlayerControl.LocalPlayer)
-                        DisableDevice.FixedUpdate();
-
-                    if (player == PlayerControl.LocalPlayer)
-                        AntiAdminer.FixedUpdate();
-
-                    if (player == PlayerControl.LocalPlayer)
-                        Monitor.FixedUpdate();
-                }
-                
-                if (GameStates.IsInTask && Main.BloodlustList.ContainsKey(player.PlayerId))
-                {
-                    if (!player.IsAlive() || Pelican.IsEaten(player.PlayerId))
-                    {
-                        Main.BloodlustList.Remove(player.PlayerId);
-                    }
-                    else
-                    {
-                        Vector2 bloodlustPos = player.transform.position;//PuppeteerListのKeyの位置
-                        Dictionary<byte, float> targetDistance = new();
-                        float dis;
-                        foreach (var target in Main.AllAlivePlayerControls)
-                        {
-                            if (target.PlayerId != player.PlayerId && !target.Is(CustomRoles.Pestilence))
-                            {
-                                dis = Vector2.Distance(bloodlustPos, target.transform.position);
-                                targetDistance.Add(target.PlayerId, dis);
-                            }
-                        }
-                        if (targetDistance.Any())
-                        {
-                            var min = targetDistance.OrderBy(c => c.Value).FirstOrDefault();//一番値が小さい
-                            PlayerControl target = Utils.GetPlayerById(min.Key);
-                            var KillRange = NormalGameOptionsV07.KillDistances[Mathf.Clamp(Main.NormalOptions.KillDistance, 0, 2)];
-                            if (min.Value <= KillRange && player.CanMove && target.CanMove)
-                            {
-                                if (player.RpcCheckAndMurder(target, true))
+                                if (warlockTimer >= 1f)
                                 {
-                                    var bloodlustId = Main.BloodlustList[player.PlayerId];
-                                    RPC.PlaySoundRPC(bloodlustId, Sounds.KillSound);
-                                    target.SetRealKiller(Utils.GetPlayerById(bloodlustId));
-                                    player.RpcMurderPlayerV3(target);
-                                    //Utils.MarkEveryoneDirtySettings();
-                                    player.MarkDirtySettings();
-                                    target.MarkDirtySettings();
-                                    Main.BloodlustList.Remove(player.PlayerId);
-                                    //Utils.NotifyRoles();
+                                    player.RpcResetAbilityCooldown();
+                                    Main.isCursed = false;
+                                    player.SyncSettings();
+                                    Main.WarlockTimer.Remove(playerId);
+                                }
+                                else
+                                {
+                                    warlockTimer += Time.fixedDeltaTime;
+                                    Main.WarlockTimer[playerId] = warlockTimer;
+                                }
+                            }
+                            else
+                            {
+                                Main.WarlockTimer.Remove(playerId);
+                            }
+                        }
+                        break;
+
+                    case CustomRoles.Arsonist:
+                        if (Main.ArsonistTimer.TryGetValue(player.PlayerId, out var arsonistTimerData))
+                        {
+                            var playerId = player.PlayerId;
+                            if (!player.IsAlive() || Pelican.IsEaten(playerId))
+                            {
+                                Main.ArsonistTimer.Remove(playerId);
+                                Utils.NotifyRoles(SpecifySeer: player);
+                                RPC.ResetCurrentDousingTarget(playerId);
+                            }
+                            else
+                            {
+                                var (arTarget, arTime) = arsonistTimerData;
+
+                                if (!arTarget.IsAlive())
+                                {
+                                    Main.ArsonistTimer.Remove(playerId);
+                                }
+                                else if (arTime >= Options.ArsonistDouseTime.GetFloat())
+                                {
+                                    player.SetKillCooldown();
+                                    Main.ArsonistTimer.Remove(playerId);
+                                    Main.isDoused[(playerId, arTarget.PlayerId)] = true;
+                                    player.RpcSetDousedPlayer(arTarget, true);
                                     Utils.NotifyRoles(SpecifySeer: player);
-                                    Utils.NotifyRoles(SpecifySeer: target);
+                                    RPC.ResetCurrentDousingTarget(playerId);
+                                }
+                                else
+                                {
+                                    float range = NormalGameOptionsV07.KillDistances[Mathf.Clamp(player.Is(CustomRoles.Reach) ? 2 : Main.NormalOptions.KillDistance, 0, 2)] + 0.5f;
+                                    float distance = Vector2.Distance(player.GetTruePosition(), arTarget.GetTruePosition());
+
+                                    if (distance <= range)
+                                    {
+                                        Main.ArsonistTimer[playerId] = (arTarget, arTime + Time.fixedDeltaTime);
+                                    }
+                                    else
+                                    {
+                                        Main.ArsonistTimer.Remove(playerId);
+                                        Utils.NotifyRoles(SpecifySeer: player);
+                                        RPC.ResetCurrentDousingTarget(playerId);
+
+                                        Logger.Info($"Canceled: {player.GetNameWithRole()}", "Arsonist");
+                                    }
                                 }
                             }
                         }
-                    }
+                        break;
                 }
 
+                // Revolutionist
+                #region Revolutionist Timer
+                if (Main.RevolutionistTimer.TryGetValue(player.PlayerId, out var revolutionistTimerData))
+                {
+                    var playerId = player.PlayerId;
+                    if (!player.IsAlive() || Pelican.IsEaten(playerId))
+                    {
+                        Main.RevolutionistTimer.Remove(playerId);
+                        Utils.NotifyRoles(SpecifySeer: player);
+                        RPC.ResetCurrentDrawTarget(playerId);
+                    }
+                    else
+                    {
+                        var (rv_target, rv_time) = revolutionistTimerData;
+
+                        if (!rv_target.IsAlive())
+                        {
+                            Main.RevolutionistTimer.Remove(playerId);
+                        }
+                        else if (rv_time >= Options.RevolutionistDrawTime.GetFloat())
+                        {
+                            var rvTargetId = rv_target.PlayerId;
+                            player.SetKillCooldown();
+                            Main.RevolutionistTimer.Remove(playerId);
+                            Main.isDraw[(playerId, rvTargetId)] = true;
+                            player.RpcSetDrawPlayer(rv_target, true);
+                            Utils.NotifyRoles(SpecifySeer: player);
+                            RPC.ResetCurrentDrawTarget(playerId);
+                            if (IRandom.Instance.Next(1, 100) <= Options.RevolutionistKillProbability.GetInt())
+                            {
+                                rv_target.SetRealKiller(player);
+                                Main.PlayerStates[rvTargetId].deathReason = PlayerState.DeathReason.Sacrifice;
+                                player.RpcMurderPlayerV3(rv_target);
+                                Main.PlayerStates[rvTargetId].SetDead();
+                                Logger.Info($"Revolutionist: {player.GetNameWithRole()} killed by {rv_target.GetNameWithRole()}", "Revolutionist");
+                            }
+                        }
+                        else
+                        {
+                            float range = NormalGameOptionsV07.KillDistances[Mathf.Clamp(player.Is(CustomRoles.Reach) ? 2 : Main.NormalOptions.KillDistance, 0, 2)] + 0.5f;
+                            float dis = Vector2.Distance(player.GetTruePosition(), rv_target.GetTruePosition());
+                            if (dis <= range)
+                            {
+                                Main.RevolutionistTimer[playerId] = (rv_target, rv_time + Time.fixedDeltaTime);
+                            }
+                            else
+                            {
+                                Main.RevolutionistTimer.Remove(playerId);
+                                Utils.NotifyRoles(SpecifySeer: player);
+                                RPC.ResetCurrentDrawTarget(playerId);
+                                Logger.Info($"Canceled: {__instance.GetNameWithRole()}", "Revolutionist");
+                            }
+                        }
+                    }
+                }
+                if (player.IsDrawDone() && player.IsAlive())
+                {
+                    var playerId = player.PlayerId;
+                    if (Main.RevolutionistStart.TryGetValue(playerId, out long startTime))
+                    {
+                        if (Main.RevolutionistLastTime.TryGetValue(playerId, out long lastTime))
+                        {
+                            long nowtime = Utils.GetTimeStamp();
+                            if (lastTime != nowtime)
+                            {
+                                Main.RevolutionistLastTime[playerId] = nowtime;
+                                lastTime = nowtime;
+                            }
+                            int time = (int)(lastTime - startTime);
+                            int countdown = Options.RevolutionistVentCountDown.GetInt() - time;
+                            Main.RevolutionistCountdown.Clear();
+
+                            if (countdown <= 0)
+                            {
+                                Utils.GetDrawPlayerCount(playerId, out var list);
+
+                                foreach (var pc in list.Where(x => x != null && x.IsAlive()))
+                                {
+                                    pc.Data.IsDead = true;
+                                    Main.PlayerStates[pc.PlayerId].deathReason = PlayerState.DeathReason.Sacrifice;
+                                    pc.RpcMurderPlayerV3(pc);
+                                    Main.PlayerStates[pc.PlayerId].SetDead();
+                                    Utils.NotifyRoles(SpecifySeer: pc);
+                                }
+                                player.Data.IsDead = true;
+                                Main.PlayerStates[playerId].deathReason = PlayerState.DeathReason.Sacrifice;
+                                player.RpcMurderPlayerV3(player);
+                                Main.PlayerStates[playerId].SetDead();
+                            }
+                            else
+                            {
+                                Main.RevolutionistCountdown.TryAdd(playerId, countdown);
+                            }
+                        }
+                        else
+                        {
+                            Main.RevolutionistLastTime.TryAdd(playerId, Main.RevolutionistStart[playerId]);
+                        }
+                    }
+                    else
+                    {
+                        Main.RevolutionistStart.TryAdd(playerId, Utils.GetTimeStamp());
+                    }
+                }
+                #endregion
+            }
+
+
+            if (!lowLoad)
+            {
+                if (Main.AllKillers.TryGetValue(player.PlayerId, out var ktime) && ktime + Options.WitnessTime.GetInt() < Utils.GetTimeStamp())
+                    Main.AllKillers.Remove(player.PlayerId);
+
+                playerRole = player.GetCustomRole();
+
+                switch (playerRole)
+                {
+                    case CustomRoles.Pelican:
+                        Pelican.OnFixedUpdate();
+                        break;
+
+                    case CustomRoles.Spy:
+                        Spy.OnFixedUpdate(player);
+                        break;
+
+                    case CustomRoles.Glitch:
+                        Glitch.UpdateHackCooldown(player);
+                        break;
+                }
+
+                if (GameStates.IsInTask)
+                {
+                    if (BountyHunter.IsEnable)
+                        BountyHunter.OnFixedUpdate(player);
+
+                    if (Puppeteer.IsEnable)
+                        Puppeteer.OnFixedUpdate(player);
+
+                    if (Shroud.IsEnable)
+                        Shroud.OnFixedUpdate(player);
+
+                    if (NWitch.IsEnable)
+                        NWitch.OnFixedUpdate(player);
+
+                    if (Spiritcaller.IsEnable)
+                        Spiritcaller.OnFixedUpdate(player);
+
+                    if (Pitfall.IsEnable)
+                        Pitfall.OnFixedUpdate(player);
+
+                    switch (playerRole)
+                    {
+                        case CustomRoles.Swooper:
+                            Swooper.OnFixedUpdate(player);
+                            break;
+
+                        case CustomRoles.Wraith:
+                            Wraith.OnFixedUpdate(player);
+                            break;
+
+                        case CustomRoles.Chameleon:
+                            Chameleon.OnFixedUpdate(player);
+                            break;
+
+                        case CustomRoles.Alchemist:
+                            Alchemist.OnFixedUpdate(player);
+                            break;
+
+                        case CustomRoles.BallLightning:
+                            BallLightning.OnFixedUpdate();
+                            break;
+
+                        case CustomRoles.BloodKnight:
+                            BloodKnight.OnFixedUpdate(player);
+                            break;
+
+                        case CustomRoles.Wildling:
+                            Wildling.OnFixedUpdate(player);
+                            break;
+
+                        case CustomRoles.Mastermind:
+                            Mastermind.OnFixedUpdate();
+                            break;
+
+                        case CustomRoles.Veteran:
+                            if (Main.VeteranInProtect.TryGetValue(player.PlayerId, out var vtime) && vtime + Options.VeteranSkillDuration.GetInt() < Utils.GetTimeStamp())
+                            {
+                                Main.VeteranInProtect.Remove(player.PlayerId);
+
+                                if (!Options.DisableShieldAnimations.GetBool())
+                                {
+                                    player.RpcGuardAndKill();
+                                }
+                                else
+                                {
+                                    player.RpcResetAbilityCooldown();
+                                }
+
+                                player.Notify(string.Format(GetString("VeteranOffGuard"), Main.VeteranNumOfUsed[player.PlayerId]));
+                            }
+                            break;
+
+                        case CustomRoles.Grenadier:
+                            var stopGrenadierSkill = false;
+                            var stopMadGrenadierSkill = false;
+
+                            if (Main.GrenadierBlinding.TryGetValue(player.PlayerId, out var grenadierTime) && grenadierTime + Options.GrenadierSkillDuration.GetInt() < Utils.GetTimeStamp())
+                            {
+                                Main.GrenadierBlinding.Remove(player.PlayerId);
+                                stopGrenadierSkill = true;
+                            }
+
+                            if (Main.MadGrenadierBlinding.TryGetValue(player.PlayerId, out var madGrenadierTime) && madGrenadierTime + Options.GrenadierSkillDuration.GetInt() < Utils.GetTimeStamp())
+                            {
+                                Main.MadGrenadierBlinding.Remove(player.PlayerId);
+                                stopMadGrenadierSkill = true;
+                            }
+
+                            if (stopGrenadierSkill || stopMadGrenadierSkill)
+                            {
+                                if (!Options.DisableShieldAnimations.GetBool())
+                                {
+                                    player.RpcGuardAndKill();
+                                }
+                                else
+                                {
+                                    player.RpcResetAbilityCooldown();
+                                }
+                                player.Notify(GetString("GrenadierSkillStop"));
+                                Utils.MarkEveryoneDirtySettings();
+                            }
+                            break;
+
+                        case CustomRoles.Lighter:
+                            if (Main.Lighter.TryGetValue(player.PlayerId, out var ltime) && ltime + Options.LighterSkillDuration.GetInt() < Utils.GetTimeStamp())
+                            {
+                                Main.Lighter.Remove(player.PlayerId);
+                                if (!Options.DisableShieldAnimations.GetBool())
+                                {
+                                    player.RpcGuardAndKill();
+                                }
+                                else
+                                {
+                                    player.RpcResetAbilityCooldown();
+                                }
+                                player.Notify(GetString("LighterSkillStop"));
+                                player.MarkDirtySettings();
+                            }
+                            break;
+
+                        case CustomRoles.Mario:
+                            if (Main.MarioVentCount[player.PlayerId] > Options.MarioVentNumWin.GetInt())
+                            {
+                                Main.MarioVentCount[player.PlayerId] = Options.MarioVentNumWin.GetInt();
+                                CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Mario);
+                                CustomWinnerHolder.WinnerIds.Add(player.PlayerId);
+                            }
+                            break;
+
+                        case CustomRoles.Vulture:
+                            if (Vulture.BodyReportCount[player.PlayerId] >= Vulture.NumberOfReportsToWin.GetInt())
+                            {
+                                Vulture.BodyReportCount[player.PlayerId] = Vulture.NumberOfReportsToWin.GetInt();
+                                CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Vulture);
+                                CustomWinnerHolder.WinnerIds.Add(player.PlayerId);
+                            }
+                            break;
+
+                        case CustomRoles.NiceMini:
+                            if (Mini.Age < 18)
+                            {
+                                if (player.IsAlive())
+                                {
+                                    if (LastFixedUpdate == Utils.GetTimeStamp()) return;
+                                    LastFixedUpdate = Utils.GetTimeStamp();
+                                    Mini.GrowUpTime++;
+                                    if (Mini.GrowUpTime >= Mini.GrowUpDuration.GetInt() / 18)
+                                    {
+                                        Mini.Age += 1;
+                                        Mini.GrowUpTime = 0;
+                                        player.RpcGuardAndKill();
+                                        Logger.Info($"年龄增加1", "Child");
+                                        if (Mini.UpDateAge.GetBool())
+                                        {
+                                            if (player.Is(CustomRoles.NiceMini)) player.Notify(GetString("MiniUp"));
+                                        }
+                                    }
+                                }
+                                else if (!player.IsAlive())
+                                {
+                                    CustomWinnerHolder.ResetAndSetWinner(CustomWinner.NiceMini);
+                                    // CustomWinnerHolder.WinnerIds.Add(mini.PlayerId); // Nice Mini does not win (Crewmates should not solo win unless Egoist)
+                                }
+                            }
+                            break;
+
+                        case CustomRoles.EvilMini:
+                            if (Mini.Age < 18)
+                            {
+                                if (LastFixedUpdate == Utils.GetTimeStamp()) return;
+                                LastFixedUpdate = Utils.GetTimeStamp();
+                                Mini.GrowUpTime++;
+                                if (Main.EvilMiniKillcooldown[player.PlayerId] >= 1f)
+                                {
+                                    Main.EvilMiniKillcooldown[player.PlayerId]--;
+                                }
+                                if (Mini.GrowUpTime >= Mini.GrowUpDuration.GetInt() / 18)
+                                {
+                                    Main.EvilMiniKillcooldownf = Main.EvilMiniKillcooldown[player.PlayerId];
+                                    Logger.Info($"记录击杀冷却{Main.EvilMiniKillcooldownf}", "Child");
+                                    Main.AllPlayerKillCooldown[player.PlayerId] = Main.EvilMiniKillcooldownf;
+                                    Main.EvilMiniKillcooldown[player.PlayerId] = Main.EvilMiniKillcooldownf;
+                                    player.MarkDirtySettings();
+                                    Mini.Age += 1;
+                                    Mini.GrowUpTime = 0;
+                                    Logger.Info($"年龄增加1", "Child");
+
+                                    if (Mini.UpDateAge.GetBool())
+                                    {
+                                        if (player.Is(CustomRoles.EvilMini)) player.Notify(GetString("MiniUp"));
+                                    }
+                                    Logger.Info($"重置击杀冷却{Main.EvilMiniKillcooldownf - 1f}", "Child");
+                                }
+                            }
+                            break;
+                    }
+
+
+                    if (Options.LadderDeath.GetBool() && player.IsAlive())
+                        FallFromLadder.FixedUpdate(player);
+
+                    if (GameStates.IsInGame && CustomRoles.Lovers.IsEnable())
+                        LoversSuicide();
+
+
+                    //Local Player only
+                    if (player == PlayerControl.LocalPlayer)
+                    {
+                        DisableDevice.FixedUpdate();
+
+                        if (AntiAdminer.IsEnable)
+                            AntiAdminer.FixedUpdate();
+
+                        if (Monitor.IsEnable)
+                            Monitor.FixedUpdate();
+                    }
+                }
 
                 if (GameStates.IsInGame && Main.RefixCooldownDelay <= 0)
                     foreach (var pc in Main.AllPlayerControls)
@@ -2861,10 +2938,10 @@ class FixedUpdatePatch
             }
         }
 
-        //LocalPlayer専用
+        //Local Player only
         if (__instance.AmOwner)
         {
-            //キルターゲットの上書き処理
+            //Kill target override processing
             if (GameStates.IsInTask && !__instance.Is(CustomRoleTypes.Impostor) && __instance.CanUseKillButton() && !__instance.Data.IsDead)
             {
                 var players = __instance.GetPlayersInAbilityRangeSorted(false);
@@ -3035,10 +3112,6 @@ class FixedUpdatePatch
                         Mark.Append(Puppeteer.TargetMark(seer, target));
                         break;
 
-                    case CustomRoles.CovenLeader:
-                        Mark.Append(CovenLeader.TargetMark(seer, target));
-                        break;
-
                     case CustomRoles.NWitch:
                         Mark.Append(NWitch.TargetMark(seer, target));
                         break;
@@ -3052,7 +3125,7 @@ class FixedUpdatePatch
 
                 if (target.Is(CustomRoles.EvilMini) && Mini.EveryoneCanKnowMini.GetBool())
                     Mark.Append(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Mini), Mini.Age != 18 && Mini.UpDateAge.GetBool() ? $"({Mini.Age})" : ""));
-                    
+
                 if ((Medic.WhoCanSeeProtect.GetInt() is 0 or 2) && seer.PlayerId == target.PlayerId && (Medic.InProtect(seer.PlayerId) || Medic.TempMarkProtected == seer.PlayerId))
                     Mark.Append($"<color={Utils.GetRoleColorCode(CustomRoles.Medic)}>✚</color>");
 
@@ -3238,7 +3311,7 @@ class EnterVentPatch
 
         Witch.OnEnterVent(pc);
         HexMaster.OnEnterVent(pc);
-        Occultist.OnEnterVent(pc);
+        //Occultist.OnEnterVent(pc);
 
         if (pc.Is(CustomRoles.Mayor) && Options.MayorHasPortableButton.GetBool() && !CopyCat.playerIdList.Contains(pc.PlayerId))
         {
@@ -3248,10 +3321,10 @@ class EnterVentPatch
                 pc?.NoCheckStartMeeting(pc?.Data);
             }
         }
-      /*  if (pc.Is(CustomRoles.Wraith)) // THIS WAS FOR WEREWOLF TESTING PURPOSES, PLEASE IGNORE
-        {
-            pc?.MyPhysics?.RpcBootFromVent(__instance.Id);            
-        } */
+        /*  if (pc.Is(CustomRoles.Wraith)) // THIS WAS FOR WEREWOLF TESTING PURPOSES, PLEASE IGNORE
+          {
+              pc?.MyPhysics?.RpcBootFromVent(__instance.Id);            
+          } */
 
         if (pc.Is(CustomRoles.Paranoia))
         {
@@ -3291,7 +3364,6 @@ class EnterVentPatch
 
         Swooper.OnEnterVent(pc, __instance);
         Wraith.OnEnterVent(pc, __instance);
-        Shade.OnEnterVent(pc, __instance);
         Addict.OnEnterVent(pc, __instance);
         Alchemist.OnEnterVent(pc, __instance.Id);
         Chameleon.OnEnterVent(pc, __instance);
@@ -3364,17 +3436,17 @@ class EnterVentPatch
             {
                 Main.DovesOfNeaceNumOfUsed[pc.PlayerId] -= 1;
                 if (!Options.DisableShieldAnimations.GetBool()) pc.RpcGuardAndKill(pc);
-                Main.AllAlivePlayerControls.Where(x => 
+                Main.AllAlivePlayerControls.Where(x =>
                 pc.Is(CustomRoles.Madmate) ?
                 (x.CanUseKillButton() && x.GetCustomRole().IsCrewmate()) :
                 (x.CanUseKillButton())
                 ).Do(x =>
                 {
-                     x.RPCPlayCustomSound("Dove");
-                     x.ResetKillCooldown();
-                     x.SetKillCooldown();
-                     if (x.Is(CustomRoles.SerialKiller))
-                        { SerialKiller.OnReportDeadBody(); }
+                    x.RPCPlayCustomSound("Dove");
+                    x.ResetKillCooldown();
+                    x.SetKillCooldown();
+                    if (x.Is(CustomRoles.SerialKiller))
+                    { SerialKiller.OnReportDeadBody(); }
                     x.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.DovesOfNeace), GetString("DovesOfNeaceSkillNotify")));
                 });
                 pc.RPCPlayCustomSound("Dove");
@@ -3412,14 +3484,14 @@ class EnterVentPatch
                     if (Main.TimeMasterBackTrack.ContainsKey(player.PlayerId))
                     {
                         var position = Main.TimeMasterBackTrack[player.PlayerId];
-                        player.RpcTeleport(new Vector2 (position.x, position.y));
+                        player.RpcTeleport(new Vector2(position.x, position.y));
                         if (pc != player)
                             player?.MyPhysics?.RpcBootFromVent(player.PlayerId);
                         Main.TimeMasterBackTrack.Remove(player.PlayerId);
                     }
                     else
                     {
-                        Main.TimeMasterBackTrack.Add(player.PlayerId, new Vector2(player.transform.position.x, player.transform.position.y));
+                        Main.TimeMasterBackTrack.Add(player.PlayerId, player.GetTruePosition());
                     }
                 }
             }
@@ -3458,7 +3530,8 @@ class CoEnterVentPatch
                         pc.Notify(GetString("EnteredBombedVent"));
                         pc.RpcMurderPlayerV3(pc);
                         Main.PlayerStates[pc.PlayerId].deathReason = PlayerState.DeathReason.Bombed;
-                        Main.BombedVents.Remove(id);}
+                        Main.BombedVents.Remove(id);
+                    }
                 }, 0.5f);
                 return true;
             }
@@ -3546,14 +3619,11 @@ class CoEnterVentPatch
         if (__instance.myPlayer.Is(CustomRoles.Wraith))
             Wraith.OnCoEnterVent(__instance, id);
 
-        if (__instance.myPlayer.Is(CustomRoles.Shade))
-            Shade.OnCoEnterVent(__instance, id);
-
         if (__instance.myPlayer.Is(CustomRoles.Chameleon))
             Chameleon.OnCoEnterVent(__instance, id);
 
-    /*    if (__instance.myPlayer.Is(CustomRoles.Alchemist) && Alchemist.PotionID == 6)
-            Alchemist.OnCoEnterVent(__instance, id); */
+        /*    if (__instance.myPlayer.Is(CustomRoles.Alchemist) && Alchemist.PotionID == 6)
+                Alchemist.OnCoEnterVent(__instance, id); */
 
         if (__instance.myPlayer.Is(CustomRoles.DovesOfNeace)) __instance.myPlayer.Notify(GetString("DovesOfNeaceMaxUsage"));
         if (__instance.myPlayer.Is(CustomRoles.Veteran)) __instance.myPlayer.Notify(GetString("VeteranMaxUsage"));
@@ -3665,7 +3735,7 @@ class PlayerControlSetRolePatch
         {
             var targetIsKiller = target.Is(CustomRoleTypes.Impostor) || Main.ResetCamPlayerList.Contains(target.PlayerId);
             var ghostRoles = new Dictionary<PlayerControl, RoleTypes>();
-            
+
             foreach (var seer in Main.AllPlayerControls)
             {
                 var self = seer.PlayerId == target.PlayerId;

@@ -37,7 +37,7 @@ public static class TemplateManager
         ["Date"] = () => DateTime.Now.ToShortDateString(),
         ["Time"] = () => DateTime.Now.ToShortTimeString(),
         ["PlayerName"] = () => ""
-        
+
     };
 
     public static void Init()
@@ -47,38 +47,48 @@ public static class TemplateManager
 
     public static void CreateIfNotExists()
     {
-        if (!File.Exists(TEMPLATE_FILE_PATH))
+
+        try
         {
-            try
+            string fileName;
+            string name = CultureInfo.CurrentCulture.Name;
+            if (name.Length >= 2)
+                fileName = name switch // https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-lcid/a9eac961-e77d-41a6-90a5-ce1a8b0cdb9c
+                {
+                    "ru" => "Russian",
+                    "zh-Hans" or "zh" or "zh-CN" or "zn-SG" => "SChinese",
+                    "zh-Hant" or "zh-HK" or "zh-MO" or "zh-TW" => "TChinese",
+                    "pt-BR" => "Brazilian",
+                    "es" or "es-ES" or "es-ES_tradnl" => "Spanish",
+                    _ => "English"
+                };
+            else fileName = "English";
+            if (!Directory.Exists(@"TOHE-DATA")) Directory.CreateDirectory(@"TOHE-DATA");
+            var defaultTemplateMsg = GetResourcesTxt($"TOHE.Resources.Config.template.{fileName}.txt");
+            if (!File.Exists(@"./TOHE-DATA/Default_Teamplate.txt")) //default template
             {
-                if (!Directory.Exists(@"TOHE-DATA")) Directory.CreateDirectory(@"TOHE-DATA");
-                if (File.Exists(@"./TOHE-DATA/templates.txt")) File.Delete(@"./TOHE-DATA/templates.txt");
+                Logger.Warn("Creating Default_Template.txt", "TemplateManager");
+                using FileStream fs = File.Create(@"./TOHE-DATA/Default_Teamplate.txt");
+            }
+            File.WriteAllText(@"./TOHE-DATA/Default_Teamplate.txt", defaultTemplateMsg); //overwriting default template
+            if (!File.Exists(TEMPLATE_FILE_PATH))
+            {
                 if (File.Exists(@"./template.txt")) File.Move(@"./template.txt", TEMPLATE_FILE_PATH);
                 else
                 {
-                    string fileName;
-                    string[] name = CultureInfo.CurrentCulture.Name.Split("-");
-                    if (name.Count() >= 2)
-                        fileName = name[0] switch
-                        {
-                            "zh" => "SChinese",
-                            "ru" => "Russian",
-                            _ => "English"
-                        };
-                    else fileName = "English";
-                    Logger.Warn($"创建新的 Template 文件：{fileName}", "TemplateManager");
-                    File.WriteAllText(TEMPLATE_FILE_PATH, GetResourcesTxt($"TOHE.Resources.Config.template.{fileName}.txt"));
+                    Logger.Warn($"Creating a new Template file from: {fileName}", "TemplateManager");
+                    File.WriteAllText(TEMPLATE_FILE_PATH, defaultTemplateMsg);
                 }
             }
-            catch (Exception ex)
+            else
             {
-                Logger.Exception(ex, "TemplateManager");
+                var text = File.ReadAllText(TEMPLATE_FILE_PATH, Encoding.GetEncoding("UTF-8"));
+                File.WriteAllText(TEMPLATE_FILE_PATH, text.Replace("5PNwUaN5", "hkk2p9ggv4"));
             }
         }
-        else
+        catch (Exception ex)
         {
-            var text = File.ReadAllText(TEMPLATE_FILE_PATH, Encoding.GetEncoding("UTF-8"));
-            File.WriteAllText(TEMPLATE_FILE_PATH, text.Replace("5PNwUaN5", "hkk2p9ggv4"));
+            Logger.Exception(ex, "TemplateManager");
         }
     }
 
@@ -101,7 +111,7 @@ public static class TemplateManager
         Func<string> playerName = () => "";
         if (playerId != 0xff)
         {
-            playerName = () => Main.AllPlayerNames[playerId];   
+            playerName = () => Main.AllPlayerNames[playerId];
         }
 
         _replaceDictionary["PlayerName"] = playerName;

@@ -25,8 +25,8 @@ public static class Translator
     {
         try
         {
-            // Get the directory containing the JSON files (e.g., TOHE.Resources.Data)
-            string jsonDirectory = "TOHE.Resources.Data";
+            // Get the directory containing the JSON files (e.g., TOHE.Resources.Lang)
+            string jsonDirectory = "TOHE.Resources.Lang";
             // Get the assembly containing the resources
             var assembly = System.Reflection.Assembly.GetExecutingAssembly();
             string[] jsonFileNames = GetJsonFileNames(assembly, jsonDirectory);
@@ -89,7 +89,10 @@ public static class Translator
         foreach (var lang in EnumHelper.GetAllValues<SupportedLangs>())
         {
             if (File.Exists(@$"./{LANGUAGE_FOLDER_NAME}/{lang}.dat"))
+            {
+                UpdateCustomTranslation($"{lang}.dat", lang);
                 LoadCustomTranslation($"{lang}.dat", lang);
+            }
         }
     }
     static void MergeJsonIntoTranslationMap(Dictionary<string, Dictionary<int, string>> translationMaps, int languageId, Dictionary<string, string> jsonDictionary)
@@ -179,7 +182,7 @@ public static class Translator
 
     public static string GetString(string str, SupportedLangs langId)
     {
-        var res = $"<LANG:{str}>";
+        var res = $"<INVALID:{str}>";
         try
         {
             if (translateMaps.TryGetValue(str, out var dic) && (!dic.TryGetValue((int)langId, out res) || res == "" || (langId is not SupportedLangs.SChinese and not SupportedLangs.TChinese && Regex.IsMatch(res, @"[\u4e00-\u9fa5]") && res == GetString(str, SupportedLangs.SChinese)))) //strに該当する&無効なlangIdかresが空
@@ -226,6 +229,50 @@ public static class Translator
         catch
         {
             return SupportedLangs.English;
+        }
+    }
+    static void UpdateCustomTranslation(string filename, SupportedLangs lang)
+    {
+        string path = @$"./{LANGUAGE_FOLDER_NAME}/{filename}";
+        if (File.Exists(path))
+        {
+            Logger.Info("Updating Custom Translations", "UpdateCustomTranslation");
+            try
+            {
+                List<string> textStrings = new();
+                using (StreamReader reader = new(path, Encoding.GetEncoding("UTF-8")))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        // Split the line by ':' to get the first part
+                        string[] parts = line.Split(':');
+
+                        // Check if there is at least one part before ':'
+                        if (parts.Length >= 1)
+                        {
+                            // Trim any leading or trailing spaces and add it to the list
+                            string textString = parts[0].Trim();
+                            textStrings.Add(textString);
+                        }
+                    }
+                }
+                var sb = new StringBuilder();
+                foreach (var templateString in translateMaps.Keys)
+                {
+                    if (!textStrings.Contains(templateString)) sb.Append($"{templateString}:\n");
+                }
+                using (FileStream fileStream = new FileStream(path, FileMode.Append, FileAccess.Write))
+                using (StreamWriter writer = new StreamWriter(fileStream))
+                {
+                    writer.WriteLine(sb.ToString());
+                }
+
+            }
+            catch (Exception e)
+            {
+                Logger.Error("An error occurred: " + e.Message, "Translator");
+            }
         }
     }
     public static void LoadCustomTranslation(string filename, SupportedLangs lang)

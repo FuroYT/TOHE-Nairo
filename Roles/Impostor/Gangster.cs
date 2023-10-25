@@ -80,12 +80,12 @@ public static class Gangster
     public static bool OnCheckMurder(PlayerControl killer, PlayerControl target)
     {
         if (RecruitLimit[killer.PlayerId] < 1) return false;
-        if (target.Is(CustomRoles.NiceMini) && Mini.Age != 18)
+        if (target.Is(CustomRoles.NiceMini) && Mini.Age < 18)
         {
-            killer.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Gangster), GetString("Cantkillkid")));
+            killer.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Gangster), GetString("CantRecruit")));
             return false;
         }
-        else if (CanBeMadmate(target) && Mini.Age == 18 || CanBeMadmate(target) && !target.Is(CustomRoles.NiceMini) && Mini.Age != 18)
+        else if (CanBeMadmate(target) && Mini.Age == 18 || CanBeMadmate(target) && !target.Is(CustomRoles.NiceMini) && Mini.Age < 18)
         {
             if (!killer.Is(CustomRoles.Recruit) && !killer.Is(CustomRoles.Charmed) && !killer.Is(CustomRoles.Infected) && !killer.Is(CustomRoles.Contagious) && !killer.Is(CustomRoles.Admired))
             {
@@ -245,6 +245,7 @@ public static class Gangster
             pc.Is(CustomRoles.Loyal) ||
             pc.Is(CustomRoles.CyberStar) ||
             pc.Is(CustomRoles.Egoist) ||
+            pc.Is(CustomRoles.Vigilante) ||
             !pc.Is(CustomRoles.NiceMini) && Mini.Age == 18
             );
     }
