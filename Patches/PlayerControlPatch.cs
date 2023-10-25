@@ -90,6 +90,8 @@ class CheckMurderPatch
         if (target.Data == null // Check if PlayerData is not null
                                 // Check target status
             || target.inVent
+            || target.inMovingPlat
+            //|| target.CheckUseZipline()
             || target.MyPhysics.Animations.IsPlayingEnterVentAnimation()
             || target.MyPhysics.Animations.IsPlayingAnyLadderAnimation()
             || target.inMovingPlat

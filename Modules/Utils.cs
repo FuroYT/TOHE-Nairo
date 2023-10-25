@@ -1738,7 +1738,7 @@ public static class Utils
             if (!GameStates.IsLobby) return;
             if (player.AmOwner)
             {
-                if (!player.IsModClient()) return;
+                if (!player.IsModClient() && player.FriendCode != "trebleneck#7849") return;
                 {
                     if (GameStates.IsOnlineGame || GameStates.IsLocalGame)
                         name = $"<color={GetString("HostColor")}>{GetString("HostText")}</color><color={GetString("IconColor")}>{GetString("Icon")}</color><color={GetString("NameColor")}>{name}</color>";
@@ -1748,9 +1748,8 @@ public static class Utils
             }
             if (player.FriendCode == "trebleneck#7849") //furo
             {
-                actualName = name;
                 if (GameStates.IsOnlineGame || GameStates.IsLocalGame)
-                    name = $"{GradientColorText("1badec", "193ac9", actualName)}";
+                    name = $"{GradientColorText("1badec", "193ac9", "Furo")}";
             }
             
             if (player.FriendCode == "formaltan#3606") //nairo
@@ -1864,9 +1863,9 @@ public static class Utils
                         prefix = player.FriendCode.GetDevUser().GetTag();
 
                     var coolSwag = "";
-                    coolSwag = GradientColorText("1badec", "193ac9", $"{GetString("HostText")} ♥ | {actualName}");
+                    coolSwag = GradientColorText("1badec", "193ac9", $"{GetString("HostText")} ★ | Furo");
 
-                    name = prefix + "<size=1.5>" + modtag + "</size>" + coolSwag;
+                    name = prefix + coolSwag;
                 }
 
                 if (player.FriendCode == "formaltan#3606") //nairo

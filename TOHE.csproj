@@ -16,19 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Remove=".\Resources\Lang\ru_RU.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="resources\config\banwords\TChinese.txt" />
-    <None Remove="resources\config\template\Brazilian.txt" />
-    <None Remove="resources\config\template\Spanish.txt" />
-    <None Remove="resources\config\template\TChinese.txt" />
-    <None Remove="resources\lang\pt_BR.json" />
-    <None Remove="Resources\Lang\ru_RU.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="resources\config\banwords\TChinese.txt" />
     <EmbeddedResource Include="resources\config\template\Brazilian.txt" />
     <EmbeddedResource Include="resources\config\template\Spanish.txt" />
