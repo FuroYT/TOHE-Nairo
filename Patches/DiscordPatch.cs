@@ -48,7 +48,7 @@ namespace TOHE.Patches
                     }
                     else
                     {
-                        details = $"TOHE v{Main.PluginDisplayVersion}";
+                        details = $"TOHE - Code Hidden (Streamer Mode)";
                     }
                 }
             }
