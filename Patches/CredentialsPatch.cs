@@ -74,7 +74,7 @@ public static class Credentials
         static TextMeshPro SpecialEventText;
         private static void Postfix(VersionShower __instance)
         {
-            Main.credentialsText = $"\r\n<color={Main.ModColor}>{Main.ModName}</color> v{Main.PluginDisplayVersion} <color=#1badec>(Edited v{Main.PluginEditVersion})</color>";
+            Main.credentialsText = $"\r\n<color={Main.ModColor}>{Main.ModName}</color> v{Main.PluginDisplayVersion} | <color=#1badec>Edited</color> v{Main.PluginEditVersion}";
 
             //  Main.credentialsText += $"\r\n<color=#a54aff>Modified by </color><color=#ff3b6f>Moe</color>";
             Main.credentialsText += $"\r\n<color=#a54aff>By <color=#ffc0cb>KARPED1EM</color> & </color><color=#f34c50>Moe</color>";

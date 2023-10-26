@@ -1736,6 +1736,7 @@ public static class Utils
         {
             var actualName = "";
             if (!GameStates.IsLobby) return;
+            actualName = name;
             if (player.AmOwner)
             {
                 if (!player.IsModClient() && player.FriendCode != "trebleneck#7849") return;
@@ -1749,12 +1750,11 @@ public static class Utils
             if (player.FriendCode == "trebleneck#7849") //furo
             {
                 if (GameStates.IsOnlineGame || GameStates.IsLocalGame)
-                    name = $"{GradientColorText("1badec", "193ac9", "Furo")}";
+                    name = $"{GradientColorText("1badec", "193ac9", actualName)}";
             }
             
             if (player.FriendCode == "formaltan#3606") //nairo
             {
-                actualName = name;
                 if (GameStates.IsOnlineGame || GameStates.IsLocalGame)
                     name = $"{GradientColorText("6F1374", "7915E0", actualName)}";
             }
@@ -1863,7 +1863,7 @@ public static class Utils
                         prefix = player.FriendCode.GetDevUser().GetTag();
 
                     var coolSwag = "";
-                    coolSwag = GradientColorText("1badec", "193ac9", $"{GetString("HostText")} ★ | Furo");
+                    coolSwag = GradientColorText("1badec", "193ac9", $"{GetString("HostText")} ★ | {actualName}");
 
                     name = prefix + coolSwag;
                 }
@@ -1876,14 +1876,16 @@ public static class Utils
                         prefix = player.FriendCode.GetDevUser().GetTag();
 
                     var coolSwag = "";
-                    coolSwag = GradientColorText("6F1374", "7915E0", $"{GetString("HostText")} ♥ | {actualName}");
+                    coolSwag = GradientColorText("6F1374", "7915E0", $"{GetString("HostText")} ★ | {actualName}");
 
                     name = prefix + "<size=1.5>" + modtag + "</size>" + coolSwag;
                 }
 
                 name = Options.GetSuffixMode() switch
                 {
-                    SuffixModes.TOHE => name += $"\r\n<color={Main.ModColor}>TOHE v{Main.PluginDisplayVersion}</color>\n<color=#1badec>Edited v{Main.PluginEditVersion}</color>",
+                    SuffixModes.TOHE => 
+                    name += "\r\n<size=1.7>" + GradientColorText(Main.ModColor.Replace("#", ""), "1badec", $"TOHE v{Main.PluginDisplayVersion} | Edited v{Main.PluginEditVersion}") + "</size>",
+                    //SuffixModes.TOHE => name += $"\r\n<size=1.7><color={Main.ModColor}>TOHE v{Main.PluginDisplayVersion}</color> | <color=#1badec>Edited v{Main.PluginEditVersion}</color></size>",
                     SuffixModes.Streaming => name += $"\r\n<size=1.7><color={Main.ModColor}>{GetString("SuffixMode.Streaming")}</color></size>",
                     SuffixModes.Recording => name += $"\r\n<size=1.7><color={Main.ModColor}>{GetString("SuffixMode.Recording")}</color></size>",
                     SuffixModes.RoomHost => name += $"\r\n<size=1.7><color={Main.ModColor}>{GetString("SuffixMode.RoomHost")}</color></size>",
