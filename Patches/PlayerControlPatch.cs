@@ -15,6 +15,7 @@ using TOHE.Roles.Crewmate;
 using TOHE.Roles.Impostor;
 using TOHE.Roles.Neutral;
 using static TOHE.Translator;
+using InnerNet;
 
 namespace TOHE;
 
@@ -716,6 +717,7 @@ class CheckMurderPatch
 
                     MessageWriter messageWriter = AmongUsClient.Instance.StartRpcImmediately(killer.NetId, (byte)RpcCalls.MurderPlayer, SendOption.None, -1);
                     messageWriter.WriteNetObject(target);
+                    messageWriter.Write((byte)MurderResultFlags.DecisionByHost);
                     AmongUsClient.Instance.FinishRpcImmediately(messageWriter);
                 }
                 killer.RpcTeleport(ops);
