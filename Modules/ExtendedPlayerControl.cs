@@ -193,6 +193,7 @@ static class ExtendedPlayerControl
                 .EndRpc();
             sender.StartRpc(killer.NetId, (byte)RpcCalls.MurderPlayer)
                 .WriteNetObject(target)
+                .Write((byte)MurderResultFlags.DecisionByHost)
                 .EndRpc();
             sender.EndMessage();
             sender.SendMessage();
@@ -276,6 +277,7 @@ static class ExtendedPlayerControl
         {
             MessageWriter messageWriter = AmongUsClient.Instance.StartRpcImmediately(killer.NetId, (byte)RpcCalls.MurderPlayer, SendOption.Reliable, killer.GetClientId());
             messageWriter.WriteNetObject(target);
+            messageWriter.Write((byte)MurderResultFlags.DecisionByHost);
             AmongUsClient.Instance.FinishRpcImmediately(messageWriter);
         }
     }
@@ -1270,6 +1272,7 @@ static class ExtendedPlayerControl
         }
         MessageWriter messageWriter = AmongUsClient.Instance.StartRpcImmediately(killer.NetId, (byte)RpcCalls.MurderPlayer, SendOption.None, -1);
         messageWriter.WriteNetObject(target);
+        messageWriter.Write((byte)MurderResultFlags.DecisionByHost);
         AmongUsClient.Instance.FinishRpcImmediately(messageWriter);
         Utils.NotifyRoles();
     }

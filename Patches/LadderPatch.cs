@@ -44,12 +44,13 @@ public class FallFromLadder
                     ushort num2 = (ushort)(NetHelpers.YRange.ReverseLerp(targetPos.y) * 65535f);
                     CustomRpcSender sender = CustomRpcSender.Create("LadderFallRpc", sendOption: Hazel.SendOption.None);
                     sender.AutoStartRpc(player.NetTransform.NetId, (byte)RpcCalls.SnapTo)
-                            .Write(num)
-                            .Write(num2)
-                    .EndRpc();
+                        .Write(num)
+                        .Write(num2)
+                        .EndRpc();
                     sender.AutoStartRpc(player.NetId, (byte)RpcCalls.MurderPlayer)
-                            .WriteNetObject(player)
-                    .EndRpc();
+                        .WriteNetObject(player)
+                        .Write((byte)MurderResultFlags.DecisionByHost)
+                        .EndRpc();
                     sender.SendMessage();
                     player.NetTransform.SnapTo(targetPos);
                     player.MurderPlayer(player, MurderResultFlags.DecisionByHost);

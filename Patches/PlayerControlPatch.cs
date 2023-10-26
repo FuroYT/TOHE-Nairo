@@ -7,7 +7,6 @@ using System.IO;
 using AmongUs.GameOptions;
 using HarmonyLib;
 using Hazel;
-using InnerNet;
 using UnityEngine;
 using TOHE.Modules;
 using TOHE.Roles.Double;
@@ -53,7 +52,18 @@ class CheckProtectPatch
         return true;
     }
 }
-[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.CheckMurder))]
+[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.CmdCheckMurder))] // Modded
+class CmdCheckMurderPatch
+{
+    public static bool Prefix(PlayerControl __instance, [HarmonyArgument(0)] PlayerControl target)
+    {
+        Logger.Info($"{__instance.GetNameWithRole()} => {target.GetNameWithRole()}", "CmdCheckMurder");
+
+        if (!AmongUsClient.Instance.AmHost) return true;
+        return CheckMurderPatch.Prefix(__instance, target);
+    }
+}
+[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.CheckMurder))] // Vanilla
 class CheckMurderPatch
 {
     public static Dictionary<byte, float> TimeSinceLastKill = new();
@@ -1257,7 +1267,10 @@ class MurderPlayerPatch
     {
         Logger.Info($"{__instance.GetNameWithRole()} => {target.GetNameWithRole()}{(target.protectedByGuardianThisRound ? "(Protected)" : "")}", "MurderPlayer");
 
-        if (RandomSpawn.CustomNetworkTransformPatch.NumOfTP.TryGetValue(__instance.PlayerId, out var num) && num > 2) RandomSpawn.CustomNetworkTransformPatch.NumOfTP[__instance.PlayerId] = 3;
+        if (RandomSpawn.CustomNetworkTransformPatch.NumOfTP.TryGetValue(__instance.PlayerId, out var num) && num > 2)
+        {
+            RandomSpawn.CustomNetworkTransformPatch.NumOfTP[__instance.PlayerId] = 3;
+        }
         if (!target.protectedByGuardianThisRound && !Doppelganger.DoppelVictim.ContainsKey(target.PlayerId))
             Camouflage.RpcSetSkin(target, ForceRevert: true);
     }
