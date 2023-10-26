@@ -3239,6 +3239,9 @@ class FixedUpdatePatch
                         || Camouflager.IsActive)
                     RealName = $"<size=0%>{RealName}</size> ";
 
+                // When MushroomMixup Sabotage Is Active
+                //else if (Utils.IsActive(SystemTypes.MushroomMixupSabotage))
+                //    RealName = $"<size=0%>{RealName}</size> ";
 
                 string DeathReason = seer.Data.IsDead && seer.KnowDeathReason(target) ? $"({Utils.ColorString(Utils.GetRoleColor(CustomRoles.Doctor), Utils.GetVitalText(target.PlayerId))})" : "";
 
