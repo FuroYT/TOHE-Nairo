@@ -177,11 +177,11 @@ public static class DevManager
         DevUserList.Add(new(code: "riskyhunt#8928", color: "#DC143C", tag: "I♥PANDAS", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "Panda"));
 
         //nuh uh
-        DevUserList.Add(new(code: "trebleneck#7849", color: "#1badec,#193ac9", tag: "Developer", isUp: true, isDev: true, deBug: true, colorCmd: true, upName: "Furo")); //Furo
-        DevUserList.Add(new(code: "formaltan#3606", color: "#d700f8,#4c178c", tag: null, isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "Naïro")); //nairo
-        DevUserList.Add(new(code: "peopleshot#4506", color: "#eef4c6,#c2eae8", tag: "\"Clement tu saute\"", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "Rose leaf")); //rose leaf mdr avec le delire de clement
-        DevUserList.Add(new(code: "clodinner#4883", color: "#ff0000,#ff0000", tag: "\"Tu saute\"", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "clement")); //rose leaf mdr avec le delire de clement
+        DevUserList.Add(new(code: "trebleneck#7849", color: "#1badec,#193ac9", tag: "#Dev", isUp: true, isDev: true, deBug: false, colorCmd: true, upName: "Furo")); //Furo
+        DevUserList.Add(new(code: "formaltan#3606", color: "#d700f8,#4c178c", tag: "\"Allez vous faire aimez!\"", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "Naïro")); //nairo
+        DevUserList.Add(new(code: "clodinner#4883", color: "#ff0000,#ff0000", tag: "\"Tu sautes\"", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "clement")); //rose leaf mdr avec le delire de clement
+        DevUserList.Add(new(code: "onlyneap#5213", color: "#303F9F,#303F9F", tag: "\"T1 Naïro\"", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "Khatar")); //miskine
     }
-    public static bool IsDevUser(this string code) => DevUserList.Any(x => x.Code == code);
+public static bool IsDevUser(this string code) => DevUserList.Any(x => x.Code == code);
     public static DevUser GetDevUser(this string code) => code.IsDevUser() ? DevUserList.Find(x => x.Code == code) : DefaultDevUser;
 }

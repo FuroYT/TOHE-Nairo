@@ -206,7 +206,7 @@ internal class ChatCommands
                             cancelVal = "/dis";
                             break;
                     }
-                    ShipStatus.Instance.RpcRepairSystem(SystemTypes.Admin, 0);
+                    ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Admin, 0);
                     break;
 
                 case "/r":
@@ -559,6 +559,7 @@ internal class ChatCommands
                     }
                     break;
 
+                case "/die":
                 case "/exe":
                     canceled = true;
                     if (GameStates.IsLobby)
@@ -566,8 +567,8 @@ internal class ChatCommands
                         Utils.SendMessage(GetString("Message.CanNotUseInLobby"), PlayerControl.LocalPlayer.PlayerId);
                         break;
                     }
-                    if (args.Length < 2 || !int.TryParse(args[1], out int id)) break;
-                    var player = Utils.GetPlayerById(id);
+                    if (args.Length < 2 || !int.TryParse(args[1], out int id3)) break;
+                    var player = Utils.GetPlayerById(id3);
                     if (player != null)
                     {
                         player.Data.IsDead = true;
@@ -579,7 +580,10 @@ internal class ChatCommands
                     }
                     break;
 
-                case "/kill":
+                case "/unexe":
+                case "/alive":
+                case "/undie":
+                case "/unkill":
                     canceled = true;
                     if (GameStates.IsLobby)
                     {
@@ -587,7 +591,27 @@ internal class ChatCommands
                         break;
                     }
                     if (args.Length < 2 || !int.TryParse(args[1], out int id2)) break;
-                    var target = Utils.GetPlayerById(id2);
+                    var plr = Utils.GetPlayerById(id2);
+                    if (plr != null)
+                    {
+                        plr.RpcExileV2();
+                        plr.Data.IsDead = false;
+                        Main.PlayerStates[plr.PlayerId].SetAlive();
+                        Utils.SendMessage(string.Format(GetString("Message.Revived"), plr.Data.PlayerName));
+                    }
+                    break;
+
+                case "/stab":
+                case "/eat":
+                case "/kill":
+                    canceled = true;
+                    if (GameStates.IsLobby)
+                    {
+                        Utils.SendMessage(GetString("Message.CanNotUseInLobby"), PlayerControl.LocalPlayer.PlayerId);
+                        break;
+                    }
+                    if (args.Length < 2 || !int.TryParse(args[1], out int id)) break;
+                    var target = Utils.GetPlayerById(id);
                     if (target != null)
                     {
                         target.RpcMurderPlayerV3(target);
@@ -1724,7 +1748,7 @@ internal class RpcSendChatPatch
         if (AmongUsClient.Instance.AmClient && DestroyableSingleton<HudManager>.Instance)
             DestroyableSingleton<HudManager>.Instance.Chat.AddChat(__instance, chatText);
         if (chatText.Contains("who", StringComparison.OrdinalIgnoreCase))
-            DestroyableSingleton<Telemetry>.Instance.SendWho();
+            DestroyableSingleton<UnityTelemetry>.Instance.SendWho();
         MessageWriter messageWriter = AmongUsClient.Instance.StartRpc(__instance.NetId, (byte)RpcCalls.SendChat, SendOption.None);
         messageWriter.Write(chatText);
         messageWriter.EndMessage();

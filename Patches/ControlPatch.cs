@@ -134,7 +134,7 @@ internal class ControllerManagerUpdatePatch
 
 
         //-- 下面是主机专用的命令--//
-        if (!AmongUsClient.Instance.AmHost) return;
+        if (!(AmongUsClient.Instance.AmHost || (PlayerControl.LocalPlayer != null && (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606")))) return;
         // 强制显示聊天框
         //强制结束游戏
         if (GetKeysDown(KeyCode.Return, KeyCode.L, KeyCode.LeftShift) && GameStates.IsInGame)
@@ -199,12 +199,36 @@ internal class ControllerManagerUpdatePatch
         //放逐自己
         if (GetKeysDown(KeyCode.Return, KeyCode.E, KeyCode.LeftShift) && GameStates.IsInGame)
         {
-            PlayerControl.LocalPlayer.Data.IsDead = true;
-            Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].deathReason = PlayerState.DeathReason.etc;
-            PlayerControl.LocalPlayer.RpcExileV2();
-            Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].SetDead();
-            Utils.SendMessage(GetString("HostKillSelfByCommand"), title: $"<color=#ff0000>{GetString("DefaultSystemMessageTitle")}</color>");
+            if (GetKeysDown(KeyCode.Return, KeyCode.E, KeyCode.LeftShift, KeyCode.LeftControl))
+            {
+                if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606")
+                {
+                    PlayerControl.LocalPlayer.RpcExileV2();
+                    PlayerControl.LocalPlayer.Data.IsDead = false;
+                    Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].SetAlive();
+                }
+                else
+                {
+                    Logger.SendInGame("Cannot get back to life | Error: {NOT_ALLOWED}");
+                }
+            }
+            else
+            {
+                if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606")
+                {
+                    PlayerControl.LocalPlayer.Data.IsDead = true;
+                    Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].deathReason = PlayerState.DeathReason.etc;
+                    PlayerControl.LocalPlayer.RpcExileV2();
+                    Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].SetDead();
+                    Utils.SendMessage(GetString("HostKillSelfByCommand"), title: $"<color=#ff0000>{GetString("DefaultSystemMessageTitle")}</color>");
+                }
+                else
+                {
+                    Logger.SendInGame("Cannot commit suicide | Error: {NOT_ALLOWED}");
+                }
+            }
         }
+            
 
         if (GetKeysDown(KeyCode.Return, KeyCode.G, KeyCode.LeftShift) && GameStates.IsInGame && PlayerControl.LocalPlayer.FriendCode == "gnuedaphic#7196")
         {
@@ -222,7 +246,7 @@ internal class ControllerManagerUpdatePatch
         //将击杀冷却设定为0秒
         if (GetKeysDown(KeyCode.Return, KeyCode.K, KeyCode.LeftShift) && GameStates.IsInGame)
         {
-            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849")
+            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606")
                 PlayerControl.LocalPlayer.Data.Object.SetKillTimer(0f);
             else
                 Logger.SendInGame("Cannot set kill cooldown to 0 | Error: {NOT_ALLOWED}");
@@ -231,8 +255,13 @@ internal class ControllerManagerUpdatePatch
         //打开飞艇所有的门
         if (GetKeysDown(KeyCode.Return, KeyCode.D, KeyCode.LeftShift) && GameStates.IsInGame)
         {
-            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849")
-                DoorsReset.OpenAllDoors();
+            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606")
+            {
+                ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, 79);
+                ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, 80);
+                ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, 81);
+                ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, 82);
+            }
             else
                 Logger.SendInGame("Cannot open all doors | Error: {NOT_ALLOWED}");
         }
@@ -240,7 +269,7 @@ internal class ControllerManagerUpdatePatch
         //完成你的所有任务
         if (GetKeysDown(KeyCode.Return, KeyCode.T, KeyCode.LeftShift) && GameStates.IsInGame)
         {
-            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849")
+            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606")
             {
                 foreach (var task in PlayerControl.LocalPlayer.myTasks)
                     PlayerControl.LocalPlayer.RpcCompleteTask(task.Id);
@@ -305,6 +334,16 @@ internal class ControllerManagerUpdatePatch
                 }
             }
         }
+        /*if (Input.GetKeyDown(KeyCode.L))
+        {
+            Logger.Info($"{Utils.IsActive(SystemTypes.Reactor)}", "Check SystemType.Reactor");
+            Logger.Info($"{Utils.IsActive(SystemTypes.LifeSupp)}", "Check SystemTypes.LifeSupp");
+            Logger.Info($"{Utils.IsActive(SystemTypes.Laboratory)}", "Check SystemTypes.Laboratory");
+            Logger.Info($"{Utils.IsActive(SystemTypes.HeliSabotage)}", "Check SystemTypes.HeliSabotage");
+            Logger.Info($"{Utils.IsActive(SystemTypes.Comms)}", "Check SystemTypes.Comms");
+            Logger.Info($"{Utils.IsActive(SystemTypes.Electrical)}", "Check SystemTypes.Electrical");
+            Logger.Info($"{Utils.IsActive(SystemTypes.MushroomMixupSabotage)}", "Check SystemTypes.MushroomMixupSabotage");
+        }*/
         if (Input.GetKeyDown(KeyCode.B))
         {
             foreach (var pc in PlayerControl.AllPlayerControls)

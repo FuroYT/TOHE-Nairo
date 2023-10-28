@@ -122,6 +122,7 @@ public class Main : BasePlugin
     public static List<int> clientIdList = new();
     public static List<(string, byte, string)> MessagesToSend = new();
     public static bool isChatCommand = false;
+    public static bool MeetingIsStarted = false;
     public static List<PlayerControl> LoversPlayers = new();
     public static bool isLoversDead = true;
     public static Dictionary<byte, float> AllPlayerKillCooldown = new();
@@ -239,8 +240,8 @@ public class Main : BasePlugin
     public static IEnumerable<PlayerControl> AllPlayerControls => PlayerControl.AllPlayerControls.ToArray().Where(p => p != null);
     public static IEnumerable<PlayerControl> AllAlivePlayerControls => PlayerControl.AllPlayerControls.ToArray().Where(p => p != null && p.IsAlive() && !p.Data.Disconnected && !Pelican.IsEaten(p.PlayerId));
 
-    public static List<PlayerControl> AllPlayerControlsList => (List<PlayerControl>)PlayerControl.AllPlayerControls.ToArray().Where(p => p != null);
-    public static List<PlayerControl> AllAlivePlayerControlsList => (List<PlayerControl>)PlayerControl.AllPlayerControls.ToArray().Where(p => p != null && p.IsAlive() && !p.Data.Disconnected && !Pelican.IsEaten(p.PlayerId));
+    //public static List<PlayerControl> AllPlayerControls => PlayerControl.AllPlayerControls.ToArray().Where(p => p != null).ToList();
+    //public static List<PlayerControl> AllAlivePlayerControls => PlayerControl.AllPlayerControls.ToArray().Where(p => p != null && p.IsAlive() && !p.Data.Disconnected && !Pelican.IsEaten(p.PlayerId)).ToList();
 
     public static Main Instance;
 

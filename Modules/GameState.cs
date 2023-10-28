@@ -248,6 +248,10 @@ public class PlayerState
             RPC.SendDeathReason(PlayerId, deathReason);
         }
     }
+    public void SetAlive()
+    {
+        IsDead = false;
+    }
     public bool IsSuicide() { return deathReason == DeathReason.Suicide; }
     public TaskState GetTaskState() { return taskState; }
     public void InitTask(PlayerControl player)
@@ -405,7 +409,7 @@ public class TaskState
                 Logger.Info("传送师触发传送:" + player.GetNameWithRole(), "Transporter");
                 var rd = IRandom.Instance;
                 List<PlayerControl> AllAlivePlayer = new();
-                foreach (var pc in Main.AllAlivePlayerControls.Where(x => !Pelican.IsEaten(x.PlayerId) && !x.inVent && !x.onLadder)) AllAlivePlayer.Add(pc);
+                foreach (var pc in Main.AllAlivePlayerControls.Where(x => x.CanBeTeleported())) AllAlivePlayer.Add(pc);
                 if (AllAlivePlayer.Count >= 2)
                 {
                     var tar1 = AllAlivePlayer[rd.Next(0, AllAlivePlayer.Count)];
