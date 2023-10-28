@@ -1759,12 +1759,7 @@ public static class Utils
                 if (GameStates.IsOnlineGame || GameStates.IsLocalGame)
                     name = $"{GradientColorText("1badec", "193ac9", actualName)}";
             }
-            
-            if (player.FriendCode == "formaltan#3606") //nairo
-            {
-                if (GameStates.IsOnlineGame || GameStates.IsLocalGame)
-                    name = $"{GradientColorText("6F1374", "7915E0", actualName)}";
-            }
+
             var modtag = "";
             if (Options.ApplyVipList.GetValue() == 1 && player.FriendCode != PlayerControl.LocalPlayer.FriendCode)
             {
@@ -1869,19 +1864,6 @@ public static class Utils
                     coolSwag = GradientColorText("1badec", "193ac9", $"{GetString("HostText")} ★ | {actualName}");
 
                     name = prefix + coolSwag;
-                }
-
-                if (player.FriendCode == "formaltan#3606") //nairo
-                {
-                    var prefix = "";
-
-                    if (!name.Contains('\r') && player.FriendCode.GetDevUser().HasTag())
-                        prefix = player.FriendCode.GetDevUser().GetTag();
-
-                    var coolSwag = "";
-                    coolSwag = GradientColorText("6F1374", "7915E0", $"{GetString("HostText")} ★ | {actualName}");
-
-                    name = prefix + "<size=1.5>" + modtag + "</size>" + coolSwag;
                 }
 
                 name = Options.GetSuffixMode() switch
@@ -2178,6 +2160,7 @@ public static class Utils
                     ((Options.DisableOnSkeld.GetBool() && Options.IsActiveSkeld) ||
                      (Options.DisableOnMira.GetBool() && Options.IsActiveMiraHQ) ||
                      (Options.DisableOnPolus.GetBool() && Options.IsActivePolus) ||
+                     (Options.DisableOnFungle.GetBool() && Options.IsActiveFungle) ||
                      (Options.DisableOnAirship.GetBool() && Options.IsActiveAirship)
                     )))
                     || Camouflager.IsActive))
@@ -2492,6 +2475,7 @@ public static class Utils
                             ((Options.DisableOnSkeld.GetBool() && Options.IsActiveSkeld) ||
                              (Options.DisableOnMira.GetBool() && Options.IsActiveMiraHQ) ||
                              (Options.DisableOnPolus.GetBool() && Options.IsActivePolus) ||
+                             (Options.DisableOnFungle.GetBool() && Options.IsActiveFungle) ||
                              (Options.DisableOnAirship.GetBool() && Options.IsActiveAirship)
                             )))
                             || Camouflager.IsActive))

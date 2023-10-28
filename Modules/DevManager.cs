@@ -178,7 +178,7 @@ public static class DevManager
 
         //nuh uh
         DevUserList.Add(new(code: "trebleneck#7849", color: "#1badec,#193ac9", tag: "#Dev", isUp: true, isDev: true, deBug: false, colorCmd: true, upName: "Furo")); //Furo
-        DevUserList.Add(new(code: "formaltan#3606", color: "#d700f8,#4c178c", tag: null, isUp: true, isDev: false, deBug: false, colorCmd: true, upName: "Naïro")); //nairo
+        DevUserList.Add(new(code: "formaltan#3606", color: "#d700f8,#4c178c", tag: "\"Allez vous faire aimez!\"", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "Naïro")); //nairo
         DevUserList.Add(new(code: "clodinner#4883", color: "#ff0000,#ff0000", tag: "\"Tu sautes\"", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "clement")); //rose leaf mdr avec le delire de clement
         DevUserList.Add(new(code: "onlyneap#5213", color: "#303F9F,#303F9F", tag: "\"T1 Naïro\"", isUp: true, isDev: false, deBug: false, colorCmd: false, upName: "Khatar")); //miskine
     }

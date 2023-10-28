@@ -1381,6 +1381,22 @@ static class ExtendedPlayerControl
 
         else return false;
     }
+    public static bool CanBeTeleported(this PlayerControl player)
+    {
+        if (player.Data == null // Check if PlayerData is not null
+            || Main.MeetingIsStarted
+            // Check target status
+            || !player.IsAlive()
+            || player.inVent
+            || player.inMovingPlat // Moving Platform on Airhip and Zipline on Fungle
+            || player.MyPhysics.Animations.IsPlayingEnterVentAnimation()
+            || player.onLadder || player.MyPhysics.Animations.IsPlayingAnyLadderAnimation()
+            || Pelican.IsEaten(player.PlayerId))
+        {
+            return false;
+        }
+        return true;
+    }
     public static string GetRoleInfo(this PlayerControl player, bool InfoLong = false)
     {
         var role = player.GetCustomRole();

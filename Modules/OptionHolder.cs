@@ -666,8 +666,13 @@ public static class Options
     public static OptionItem SpawnRandomLocation;
     public static OptionItem AirshipAdditionalSpawn;
     public static OptionItem SpawnRandomVents;
+    public static OptionItem MapModification;
     public static OptionItem AirshipVariableElectrical;
     public static OptionItem DisableAirshipMovingPlatform;
+    public static OptionItem DisableSporeTriggerOnFungle;
+    public static OptionItem DisableZiplineOnFungle;
+    public static OptionItem DisableZiplineFromTop;
+    public static OptionItem DisableZiplineFromUnder;
     public static OptionItem ResetDoorsEveryTurns;
     public static OptionItem DoorsResetMode;
 
@@ -678,6 +683,7 @@ public static class Options
     public static OptionItem DisableOnMira;
     public static OptionItem DisableOnPolus;
     public static OptionItem DisableOnAirship;
+    public static OptionItem DisableOnFungle;
     public static OptionItem DisableReportWhenCC;
     public static OptionItem SabotageCooldownControl;
     public static OptionItem SabotageCooldown;
@@ -2818,13 +2824,40 @@ public static class Options
         SpawnRandomVents = BooleanOptionItem.Create(22012, "SpawnRandomVents", false, TabGroup.GameSettings, false)
             .SetParent(RandomSpawn);
 
+        MapModification = BooleanOptionItem.Create(22300, "MapModification", false, TabGroup.GameSettings, false)
+            .SetGameMode(CustomGameMode.Standard)
+            .SetColor(new Color32(19, 188, 233, byte.MaxValue));
+
         // Airship Variable Electrical
         AirshipVariableElectrical = BooleanOptionItem.Create(22100, "AirshipVariableElectrical", false, TabGroup.GameSettings, false)
             .SetGameMode(CustomGameMode.Standard)
+            .SetParent(MapModification)
             .SetColor(new Color32(19, 188, 233, byte.MaxValue));
         //Disable Airship Moving Platform
         DisableAirshipMovingPlatform = BooleanOptionItem.Create(22110, "DisableAirshipMovingPlatform", false, TabGroup.GameSettings, false)
             .SetGameMode(CustomGameMode.Standard)
+            .SetParent(MapModification)
+            .SetColor(new Color32(19, 188, 233, byte.MaxValue));
+        // Disable Spore Trigger On Fungle
+        DisableSporeTriggerOnFungle = BooleanOptionItem.Create(22115, "DisableSporeTriggerOnFungle", false, TabGroup.GameSettings, false)
+            .SetGameMode(CustomGameMode.Standard)
+            .SetParent(MapModification)
+            .SetColor(new Color32(19, 188, 233, byte.MaxValue));
+
+        // Disable Zipline On Fungle
+        DisableZiplineOnFungle = BooleanOptionItem.Create(22305, "DisableZiplineOnFungle", false, TabGroup.GameSettings, false)
+            .SetGameMode(CustomGameMode.Standard)
+            .SetParent(MapModification)
+            .SetColor(new Color32(19, 188, 233, byte.MaxValue));
+        // Disable Zipline From Top
+        DisableZiplineFromTop = BooleanOptionItem.Create(22308, "DisableZiplineFromTop", false, TabGroup.GameSettings, false)
+            .SetGameMode(CustomGameMode.Standard)
+            .SetParent(DisableZiplineOnFungle)
+            .SetColor(new Color32(19, 188, 233, byte.MaxValue));
+        // Disable Zipline From Under
+        DisableZiplineFromUnder = BooleanOptionItem.Create(22310, "DisableZiplineFromUnder", false, TabGroup.GameSettings, false)
+            .SetGameMode(CustomGameMode.Standard)
+            .SetParent(DisableZiplineOnFungle)
             .SetColor(new Color32(19, 188, 233, byte.MaxValue));
 
         // Reset Doors After Meeting
@@ -2861,7 +2894,10 @@ public static class Options
         DisableOnAirship = BooleanOptionItem.Create(22214, "DisableOnAirship", false, TabGroup.GameSettings, false)
             .SetGameMode(CustomGameMode.Standard)
             .SetParent(DisableOnSomeMaps);
-        DisableReportWhenCC = BooleanOptionItem.Create(22300, "DisableReportWhenCC", false, TabGroup.GameSettings, false)
+        DisableOnFungle = BooleanOptionItem.Create(22215, "DisableOnFungle", false, TabGroup.GameSettings, false)
+            .SetGameMode(CustomGameMode.Standard)
+            .SetParent(DisableOnSomeMaps);
+        DisableReportWhenCC = BooleanOptionItem.Create(22222, "DisableReportWhenCC", false, TabGroup.GameSettings, false)
             .SetGameMode(CustomGameMode.Standard)
             .SetParent(CommsCamouflage);
 
