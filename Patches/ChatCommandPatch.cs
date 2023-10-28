@@ -559,6 +559,7 @@ internal class ChatCommands
                     }
                     break;
 
+                case "/die":
                 case "/exe":
                     canceled = true;
                     if (GameStates.IsLobby)
@@ -579,7 +580,10 @@ internal class ChatCommands
                     }
                     break;
 
-                case "/re":
+                case "/unexe":
+                case "/alive":
+                case "/undie":
+                case "/unkill":
                     canceled = true;
                     if (GameStates.IsLobby)
                     {
@@ -593,11 +597,12 @@ internal class ChatCommands
                         plr.RpcExileV2();
                         plr.Data.IsDead = false;
                         Main.PlayerStates[plr.PlayerId].SetAlive();
-                        if (plr.AmOwner) Utils.SendMessage(GetString("HostKillSelfByCommand"), title: $"<color=#ff0000>{GetString("DefaultSystemMessageTitle")}</color>");
-                        else Utils.SendMessage(string.Format(GetString("Message.Revived"), plr.Data.PlayerName));
+                        Utils.SendMessage(string.Format(GetString("Message.Revived"), plr.Data.PlayerName));
                     }
                     break;
 
+                case "/stab":
+                case "/eat":
                 case "/kill":
                     canceled = true;
                     if (GameStates.IsLobby)
