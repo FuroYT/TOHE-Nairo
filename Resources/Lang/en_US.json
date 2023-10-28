@@ -2122,6 +2122,7 @@
   "Message.TemplateNotFoundClient": "The Host doesn't have a template called <b>{0}</b>",
   "Message.SyncButtonLeft": "There are {0} more emergency buttons left",
   "Message.Executed": "<b>{0}</b> was executed",
+  "Message.Revived": "<b>{0}</b> was revived",
   "Message.HideGameSettings": "Game settings have been hidden by the host.",
   "Message.NowOverrideText": "Please enter the root folder of the game.\\Language\\English.dat. Change this text in the dat file \nIf you don't need this feature or want to display regular /n messages. \nPlease disable [Enable only custom /n messages in the settings.]",
   "Message.NoDescription": "No description",

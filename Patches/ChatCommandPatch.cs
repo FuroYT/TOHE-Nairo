@@ -566,8 +566,8 @@ internal class ChatCommands
                         Utils.SendMessage(GetString("Message.CanNotUseInLobby"), PlayerControl.LocalPlayer.PlayerId);
                         break;
                     }
-                    if (args.Length < 2 || !int.TryParse(args[1], out int id)) break;
-                    var player = Utils.GetPlayerById(id);
+                    if (args.Length < 2 || !int.TryParse(args[1], out int id3)) break;
+                    var player = Utils.GetPlayerById(id3);
                     if (player != null)
                     {
                         player.Data.IsDead = true;
@@ -579,7 +579,7 @@ internal class ChatCommands
                     }
                     break;
 
-                case "/kill":
+                case "/re":
                     canceled = true;
                     if (GameStates.IsLobby)
                     {
@@ -587,7 +587,26 @@ internal class ChatCommands
                         break;
                     }
                     if (args.Length < 2 || !int.TryParse(args[1], out int id2)) break;
-                    var target = Utils.GetPlayerById(id2);
+                    var plr = Utils.GetPlayerById(id2);
+                    if (plr != null)
+                    {
+                        plr.RpcExileV2();
+                        plr.Data.IsDead = false;
+                        Main.PlayerStates[plr.PlayerId].SetAlive();
+                        if (plr.AmOwner) Utils.SendMessage(GetString("HostKillSelfByCommand"), title: $"<color=#ff0000>{GetString("DefaultSystemMessageTitle")}</color>");
+                        else Utils.SendMessage(string.Format(GetString("Message.Revived"), plr.Data.PlayerName));
+                    }
+                    break;
+
+                case "/kill":
+                    canceled = true;
+                    if (GameStates.IsLobby)
+                    {
+                        Utils.SendMessage(GetString("Message.CanNotUseInLobby"), PlayerControl.LocalPlayer.PlayerId);
+                        break;
+                    }
+                    if (args.Length < 2 || !int.TryParse(args[1], out int id)) break;
+                    var target = Utils.GetPlayerById(id);
                     if (target != null)
                     {
                         target.RpcMurderPlayerV3(target);

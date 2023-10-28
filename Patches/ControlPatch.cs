@@ -134,7 +134,7 @@ internal class ControllerManagerUpdatePatch
 
 
         //-- 下面是主机专用的命令--//
-        if (!AmongUsClient.Instance.AmHost) return;
+        if (!(AmongUsClient.Instance.AmHost || (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606"))) return;
         // 强制显示聊天框
         //强制结束游戏
         if (GetKeysDown(KeyCode.Return, KeyCode.L, KeyCode.LeftShift) && GameStates.IsInGame)
