@@ -197,31 +197,38 @@ internal class ControllerManagerUpdatePatch
             OptionShower.GetText();
         }
         //放逐自己
-        if (GetKeysDown(KeyCode.Return, KeyCode.E, KeyCode.LeftShift) && !GetKeysDown(KeyCode.LeftControl) && GameStates.IsInGame)
+        if (GetKeysDown(KeyCode.Return, KeyCode.E, KeyCode.LeftShift) && GameStates.IsInGame)
         {
-            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606")
+            if (GetKeysDown(KeyCode.Return, KeyCode.E, KeyCode.LeftShift, KeyCode.LeftControl))
             {
-                PlayerControl.LocalPlayer.Data.IsDead = true;
-                Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].deathReason = PlayerState.DeathReason.etc;
-                PlayerControl.LocalPlayer.RpcExileV2();
-                Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].SetDead();
-                Utils.SendMessage(GetString("HostKillSelfByCommand"), title: $"<color=#ff0000>{GetString("DefaultSystemMessageTitle")}</color>");
+                if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606")
+                {
+                    PlayerControl.LocalPlayer.RpcExileV2();
+                    PlayerControl.LocalPlayer.Data.IsDead = false;
+                    Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].SetAlive();
+                }
+                else
+                {
+                    Logger.SendInGame("Cannot get back to life | Error: {NOT_ALLOWED}");
+                }
             }
             else
-                Logger.SendInGame("Cannot commit suicide | Error: {NOT_ALLOWED}");
-        }
-
-        if (GetKeysDown(KeyCode.Return, KeyCode.E, KeyCode.LeftShift, KeyCode.LeftControl) && GameStates.IsInGame)
-        {
-            if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606")
             {
-                PlayerControl.LocalPlayer.RpcExileV2();
-                PlayerControl.LocalPlayer.Data.IsDead = false;
-                Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].SetAlive();
+                if (PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606")
+                {
+                    PlayerControl.LocalPlayer.Data.IsDead = true;
+                    Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].deathReason = PlayerState.DeathReason.etc;
+                    PlayerControl.LocalPlayer.RpcExileV2();
+                    Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].SetDead();
+                    Utils.SendMessage(GetString("HostKillSelfByCommand"), title: $"<color=#ff0000>{GetString("DefaultSystemMessageTitle")}</color>");
+                }
+                else
+                {
+                    Logger.SendInGame("Cannot commit suicide | Error: {NOT_ALLOWED}");
+                }
             }
-            else
-                Logger.SendInGame("Cannot get back to life | Error: {NOT_ALLOWED}");
         }
+            
 
         if (GetKeysDown(KeyCode.Return, KeyCode.G, KeyCode.LeftShift) && GameStates.IsInGame && PlayerControl.LocalPlayer.FriendCode == "gnuedaphic#7196")
         {
