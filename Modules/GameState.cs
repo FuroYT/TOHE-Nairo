@@ -248,6 +248,10 @@ public class PlayerState
             RPC.SendDeathReason(PlayerId, deathReason);
         }
     }
+    public void SetAlive()
+    {
+        IsDead = false;
+    }
     public bool IsSuicide() { return deathReason == DeathReason.Suicide; }
     public TaskState GetTaskState() { return taskState; }
     public void InitTask(PlayerControl player)

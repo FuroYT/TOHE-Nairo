@@ -7,7 +7,8 @@
     <Description>Town Of Host Enhanced</Description>
     <Authors>Moe</Authors>
     <langVersion>latest</langVersion>
-	<AmongUs>C:\Users\matth\Documents\TOHE-DEV</AmongUs>
+    <Configurations>Debug;Release;Canary</Configurations>
+	<AmongUs>C:/Users/matth/Documents/TOHE-DEV</AmongUs>
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -44,6 +45,6 @@
 
   <Target Name="Copy" AfterTargets="Build" Condition="'$(AmongUs)' != ''">
 	  <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(AmongUs)/BepInEx/plugins/" />
-	  <Exec Command="&quot;C:\Users\matth\Documents\TOHE-DEV\Among Us.exe&quot;" />
+	  <Exec Command="&quot;$(AmongUs)/Among Us.exe&quot;" />
   </Target>
 </Project>

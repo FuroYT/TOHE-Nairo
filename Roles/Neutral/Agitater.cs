@@ -172,7 +172,7 @@ public static class Agitater
 
         if (target.Is(CustomRoles.Pestilence) || (target.Is(CustomRoles.Veteran) && Main.VeteranInProtect.ContainsKey(target.PlayerId)))
         {
-            target.RpcMurderPlayer(player, true);
+            target.RpcMurderPlayerV3(player);
             ResetBomb();
             return;
         }

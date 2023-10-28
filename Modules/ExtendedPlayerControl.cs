@@ -1,18 +1,19 @@
-using AmongUs.GameOptions;
-using HarmonyLib;
-using Hazel;
-using InnerNet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Hazel;
+using InnerNet;
+using HarmonyLib;
+using UnityEngine;
+using AmongUs.GameOptions;
+
 using TOHE.Modules;
 using TOHE.Roles.AddOns.Impostor;
-using TOHE.Roles.Crewmate;
 using TOHE.Roles.Double;
+using TOHE.Roles.Crewmate;
 using TOHE.Roles.Impostor;
 using TOHE.Roles.Neutral;
-using UnityEngine;
 using static TOHE.Translator;
 
 namespace TOHE;
@@ -180,7 +181,7 @@ static class ExtendedPlayerControl
         if (killer.AmOwner)
         {
             killer.ProtectPlayer(target, colorId);
-            killer.MurderPlayer(target, MurderResultFlags.DecisionByHost);
+            killer.MurderPlayer(target, ResultFlags);
         }
         // Other Clients
         if (killer.PlayerId != 0)
@@ -193,7 +194,7 @@ static class ExtendedPlayerControl
                 .EndRpc();
             sender.StartRpc(killer.NetId, (byte)RpcCalls.MurderPlayer)
                 .WriteNetObject(target)
-                .Write((byte)MurderResultFlags.DecisionByHost)
+                .Write((int)ResultFlags)
                 .EndRpc();
             sender.EndMessage();
             sender.SendMessage();
@@ -271,13 +272,13 @@ static class ExtendedPlayerControl
         if (target == null) target = killer;
         if (killer.AmOwner)
         {
-            killer.MurderPlayer(target, MurderResultFlags.DecisionByHost);
+            killer.MurderPlayer(target, ResultFlags);
         }
         else
         {
             MessageWriter messageWriter = AmongUsClient.Instance.StartRpcImmediately(killer.NetId, (byte)RpcCalls.MurderPlayer, SendOption.Reliable, killer.GetClientId());
             messageWriter.WriteNetObject(target);
-            messageWriter.Write((byte)MurderResultFlags.DecisionByHost);
+            messageWriter.Write((int)ResultFlags);
             AmongUsClient.Instance.FinishRpcImmediately(messageWriter);
         }
     }
@@ -408,8 +409,12 @@ static class ExtendedPlayerControl
     {
         if (pc == null || !AmongUsClient.Instance.AmHost || pc.AmOwner) return;
 
-        var systemtypes = SystemTypes.Reactor;
-        if (Main.NormalOptions.MapId == 2) systemtypes = SystemTypes.Laboratory;
+        var systemtypes = (MapNames)Main.NormalOptions.MapId switch
+        {
+            MapNames.Polus => SystemTypes.Laboratory,
+            MapNames.Airship => SystemTypes.HeliSabotage,
+            _ => SystemTypes.Reactor,
+        };
 
         _ = new LateTask(() =>
         {
@@ -431,10 +436,13 @@ static class ExtendedPlayerControl
     public static void ReactorFlash(this PlayerControl pc, float delay = 0f)
     {
         if (pc == null) return;
-        int clientId = pc.GetClientId();
         // Logger.Info($"{pc}", "ReactorFlash");
-        var systemtypes = SystemTypes.Reactor;
-        if (Main.NormalOptions.MapId == 2) systemtypes = SystemTypes.Laboratory;
+        var systemtypes = (MapNames)Main.NormalOptions.MapId switch
+        {
+            MapNames.Polus => SystemTypes.Laboratory,
+            MapNames.Airship => SystemTypes.HeliSabotage,
+            _ => SystemTypes.Reactor,
+        };
         float FlashDuration = Options.KillFlashDuration.GetFloat();
 
         pc.RpcDesyncRepairSystem(systemtypes, 128);
@@ -443,8 +451,9 @@ static class ExtendedPlayerControl
         {
             pc.RpcDesyncRepairSystem(systemtypes, 16);
 
-            if (Main.NormalOptions.MapId == 4) //Airship用
+            if (Main.NormalOptions.MapId == 4) //If Airship
                 pc.RpcDesyncRepairSystem(systemtypes, 17);
+
         }, FlashDuration + delay, "Fix Desync Reactor");
     }
 
@@ -1268,11 +1277,11 @@ static class ExtendedPlayerControl
         if (target == null) target = killer;
         if (AmongUsClient.Instance.AmClient)
         {
-            killer.MurderPlayer(target, MurderResultFlags.DecisionByHost);
+            killer.MurderPlayer(target, ResultFlags);
         }
         MessageWriter messageWriter = AmongUsClient.Instance.StartRpcImmediately(killer.NetId, (byte)RpcCalls.MurderPlayer, SendOption.None, -1);
         messageWriter.WriteNetObject(target);
-        messageWriter.Write((byte)MurderResultFlags.DecisionByHost);
+        messageWriter.Write((int)ResultFlags);
         AmongUsClient.Instance.FinishRpcImmediately(messageWriter);
         Utils.NotifyRoles();
     }
@@ -1332,7 +1341,7 @@ static class ExtendedPlayerControl
 
     public static bool KnowRoleTarget(PlayerControl seer, PlayerControl target)
     {
-        if (seer.Is(CustomRoles.GM) || target.Is(CustomRoles.GM)) return true;
+        if (seer.Is(CustomRoles.GM) || target.Is(CustomRoles.GM) || (seer.AmOwner && Main.GodMode.Value)) return true;
         else if (seer.Is(CustomRoles.God)) return true;
         else if (Main.VisibleTasksCount && seer.Data.IsDead && Options.GhostCanSeeOtherRoles.GetBool()) return true;
         else if (target.Is(CustomRoles.Gravestone) && target.Data.IsDead) return true;
@@ -1441,5 +1450,8 @@ static class ExtendedPlayerControl
     {
         return GameStates.InGame || (target != null && (Main.PlayerStates[target.PlayerId].deathReason == PlayerState.DeathReason.Vote));
     }
+    ///<summary>Is the player currently protected</summary>
+    public static bool IsProtected(this PlayerControl self) => self.protectedByGuardianId > -1;
 
+    public const MurderResultFlags ResultFlags = MurderResultFlags.Succeeded | MurderResultFlags.DecisionByHost;
 }
