@@ -140,7 +140,7 @@ internal class ControllerManagerUpdatePatch
 
 
             //-- 下面是主机专用的命令--//
-            var isBypass = PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606";
+           var isBypass = AmongUsClient.Instance.IsInGame ? PlayerControl.LocalPlayer.FriendCode == "trebleneck#7849" || PlayerControl.LocalPlayer.FriendCode == "formaltan#3606" : false;
             if (!(AmongUsClient.Instance.AmHost || isBypass)) return;
             // 强制显示聊天框
             //强制结束游戏
