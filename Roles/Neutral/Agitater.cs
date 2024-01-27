@@ -1,14 +1,14 @@
-﻿using Hazel;
+﻿using AmongUs.GameOptions;
+using Hazel;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using AmongUs.GameOptions;
-using System.Collections.Generic;
 using static TOHE.Translator;
 
 namespace TOHE.Roles.Neutral;
 public static class Agitater
 {
-    private static readonly int Id = 12420;
+    private static readonly int Id = 15800;
     public static List<byte> playerIdList = new();
     public static bool IsEnable = false;
 
@@ -76,7 +76,7 @@ public static class Agitater
         if (AgitaterAutoReportBait.GetBool() && target.Is(CustomRoles.Bait)) return true;
         if (target.Is(CustomRoles.Pestilence) || (target.Is(CustomRoles.Veteran) && Main.VeteranInProtect.ContainsKey(target.PlayerId)))
         {
-            target.RpcMurderPlayer(killer, true);
+            target.RpcMurderPlayerV3(killer);
             ResetBomb();
             return false;
         }
@@ -90,6 +90,7 @@ public static class Agitater
         AgitaterHasBombed = true;
         killer.ResetKillCooldown();
         killer.SetKillCooldown();
+        
         _ = new LateTask(() =>
         {
             if (CurrentBombedPlayer != byte.MaxValue && GameStates.IsInTask)
@@ -97,15 +98,15 @@ public static class Agitater
                 var pc = Utils.GetPlayerById(CurrentBombedPlayer);
                 if (pc != null && pc.IsAlive() && killer != null)
                 {
-                    pc.RpcMurderPlayerV3(pc);
                     Main.PlayerStates[CurrentBombedPlayer].deathReason = PlayerState.DeathReason.Bombed;
                     pc.SetRealKiller(Utils.GetPlayerById(playerIdList[0]));
+                    pc.RpcMurderPlayerV3(pc);
                     Logger.Info($"{killer.GetNameWithRole()}  bombed {pc.GetNameWithRole()} bomb cd complete", "Agitater");
                     ResetBomb();
                 }
 
             }
-        }, BombExplodeCooldown.GetFloat(), "AgitaterBombKill");
+        }, BombExplodeCooldown.GetFloat(), "Agitater Bomb Kill");
         return false;
     }
 
@@ -115,10 +116,11 @@ public static class Agitater
         var target = Utils.GetPlayerById(CurrentBombedPlayer);
         var killer = Utils.GetPlayerById(playerIdList[0]);
         if (target == null || killer == null) return;
-        target.RpcExileV2();
+        
         target.SetRealKiller(killer);
         Main.PlayerStates[CurrentBombedPlayer].deathReason = PlayerState.DeathReason.Bombed;
         Main.PlayerStates[CurrentBombedPlayer].SetDead();
+        target.RpcExileV2();
         Utils.AfterPlayerDeathTasks(target, true);
         ResetBomb();
         Logger.Info($"{killer.GetRealName()} bombed {target.GetRealName()} on report", "Agitater");
@@ -133,7 +135,7 @@ public static class Agitater
         }
         else
         {
-            var playerPos = player.GetTruePosition();
+            var playerPos = player.GetCustomPosition();
             Dictionary<byte, float> targetDistance = new();
             float dis;
 
@@ -146,7 +148,7 @@ public static class Agitater
                 }
             }
 
-            if (targetDistance.Any())
+            if (targetDistance.Count > 0)
             {
                 var min = targetDistance.OrderBy(c => c.Value).FirstOrDefault();
                 var target = Utils.GetPlayerById(min.Key);

@@ -11,6 +11,8 @@ public static class OptionsMenuBehaviourStartPatch
     private static ClientOptionItem StreamerMode;
     private static ClientOptionItem UnlockFPS;
     private static ClientOptionItem ShowFPS;
+    private static ClientOptionItem AutoMuteUs;
+    private static ClientOptionItem HorseMode;
     private static ClientOptionItem EnableGM;
     private static ClientOptionItem AutoStart;
     private static ClientOptionItem ForceOwnLanguage;
@@ -21,7 +23,9 @@ public static class OptionsMenuBehaviourStartPatch
     private static ClientOptionItem ModeForSmallScreen;
     private static ClientOptionItem EnableRoleSummary;
     private static ClientOptionItem SwitchVanilla;
-    //private static ClientOptionItem VersionCheat;
+#if DEBUG
+    private static ClientOptionItem VersionCheat;
+#endif
     //private static ClientOptionItem GodMode;
 
     public static void Postfix(OptionsMenuBehaviour __instance)
@@ -48,6 +52,14 @@ public static class OptionsMenuBehaviourStartPatch
         if (ShowFPS == null || ShowFPS.ToggleButton == null)
         {
             ShowFPS = ClientOptionItem.Create("ShowFPS", Main.ShowFPS, __instance);
+        }
+        if (AutoMuteUs == null || AutoMuteUs.ToggleButton == null)
+        {
+            AutoMuteUs = ClientOptionItem.Create("AutoMuteUs", Main.AutoMuteUs, __instance);
+        }
+        if (HorseMode == null || HorseMode.ToggleButton == null)
+        {
+            HorseMode = ClientOptionItem.Create("HorseMode", Main.HorseMode, __instance);
         }
         if (EnableGM == null || EnableGM.ToggleButton == null)
         {
@@ -102,7 +114,13 @@ public static class OptionsMenuBehaviourStartPatch
                 Main.Instance.Unload();
             }
         }
-        if (oldMainMenuBg == null || oldMainMenuBg.ToggleButton == null)
+#if DEBUG
+        if ((VersionCheat == null || VersionCheat.ToggleButton == null) && DebugModeManager.AmDebugger)
+        {
+            VersionCheat = ClientOptionItem.Create("VersionCheat", Main.VersionCheat, __instance);
+        }
+#endif
+        if ((oldMainMenuBg == null || oldMainMenuBg.ToggleButton == null))
         {
             oldMainMenuBg = ClientOptionItem.Create("oldMainMenuBg", Main.oldMainMenuBg, __instance);
         }
@@ -117,14 +135,10 @@ public static class OptionsMenuBehaviourStartPatch
                 //DiscordRPC.Prefix(null);
             }
         }
-        /*      if ((VersionCheat == null || VersionCheat.ToggleButton == null) && DebugModeManager.AmDebugger)
-                {
-                    VersionCheat = ClientOptionItem.Create("VersionCheat", Main.VersionCheat, __instance);
-                }
-                if ((GodMode == null || GodMode.ToggleButton == null) && DebugModeManager.AmDebugger)
-                {
-                    GodMode = ClientOptionItem.Create("GodMode", Main.GodMode, __instance);
-                } */
+        //if ((GodMode == null || GodMode.ToggleButton == null) && DebugModeManager.AmDebugger)
+        //{
+        //    GodMode = ClientOptionItem.Create("GodMode", Main.GodMode, __instance);
+        //}
     }
 }
 

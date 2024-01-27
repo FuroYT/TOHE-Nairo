@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using TOHE.Modules;
+using TOHE.Modules.ChatManager;
 using TOHE.Roles.Impostor;
 using TOHE.Roles.Neutral;
 using UnityEngine;
@@ -24,11 +25,11 @@ class EndGamePatch
         Logger.Info("-----------游戏结束-----------", "Phase");
         if (!GameStates.IsModHost) return;
         SummaryText = new();
-        foreach (var id in Main.PlayerStates.Keys)
+        foreach (var id in Main.PlayerStates.Keys.ToArray())
         {
             if (Doppelganger.IsEnable)
             {
-                if (Doppelganger.DoppelVictim.Keys.Contains(id))
+                if (Doppelganger.DoppelVictim.ContainsKey(id))
                 {
                     var dpc = Utils.GetPlayerById(id);
                     if (dpc != null) 
@@ -59,12 +60,12 @@ class EndGamePatch
             if (date == DateTime.MinValue) continue;
             var killerId = kvp.Value.GetRealKiller();
             var targetId = kvp.Key;
-            sb.Append($"\n{date:T} {Main.AllPlayerNames[targetId]}({Utils.GetDisplayRoleName(targetId, true)}{Utils.GetSubRolesText(targetId, summary: true)}) [{Utils.GetVitalText(kvp.Key)}]");
+            sb.Append($"\n{date:T} {Main.AllPlayerNames[targetId]}({(Options.CurrentGameMode == CustomGameMode.FFA ? string.Empty : Utils.GetDisplayRoleName(targetId, true))}{(Options.CurrentGameMode == CustomGameMode.FFA ? string.Empty : Utils.GetSubRolesText(targetId, summary: true))}) [{Utils.GetVitalText(kvp.Key)}]");
             if (killerId != byte.MaxValue && killerId != targetId)
-                sb.Append($"\n\t⇐ {Main.AllPlayerNames[killerId]}({Utils.GetDisplayRoleName(killerId, true)}{Utils.GetSubRolesText(killerId, summary: true)})");
+                sb.Append($"\n\t⇐ {Main.AllPlayerNames[killerId]}({(Options.CurrentGameMode == CustomGameMode.FFA ? string.Empty : Utils.GetDisplayRoleName(killerId, true))}{(Options.CurrentGameMode == CustomGameMode.FFA ? string.Empty : Utils.GetSubRolesText(killerId, summary: true))})");
         }
         KillLog = sb.ToString();
-        if (!KillLog.Contains("\n")) KillLog = "";
+        if (!KillLog.Contains('\n')) KillLog = "";
 
         Main.NormalOptions.KillCooldown = Options.DefaultKillCooldown;
         //winnerListリセット
@@ -74,14 +75,14 @@ class EndGamePatch
         {
             if (CustomWinnerHolder.WinnerIds.Contains(pc.PlayerId)) winner.Add(pc);
         }
-        foreach (var team in CustomWinnerHolder.WinnerRoles)
+        foreach (var team in CustomWinnerHolder.WinnerRoles.ToArray())
         {
             winner.AddRange(Main.AllPlayerControls.Where(p => p.Is(team) && !winner.Contains(p)));
         }
 
         Main.winnerNameList = new();
         Main.winnerList = new();
-        foreach (var pc in winner)
+        foreach (var pc in winner.ToArray())
         {
             if (CustomWinnerHolder.WinnerTeam is not CustomWinner.Draw && pc.Is(CustomRoles.GM)) continue;
 
@@ -94,6 +95,8 @@ class EndGamePatch
         Main.isDoused = new Dictionary<(byte, byte), bool>();
         Main.isDraw = new Dictionary<(byte, byte), bool>();
         Main.isRevealed = new Dictionary<(byte, byte), bool>();
+        Main.PlayerQuitTimes = new();
+        ChatManager.ChatSentBySystem = new();
 
         Main.VisibleTasksCount = false;
         if (AmongUsClient.Instance.AmHost)
@@ -113,7 +116,7 @@ class SetEverythingUpPatch
 
     public static void Postfix(EndGameManager __instance)
     {
-        if (!Main.playerVersion.ContainsKey(0)) return;
+        if (!Main.playerVersion.ContainsKey(AmongUsClient.Instance.HostId)) return;
         //#######################################
         //          ==勝利陣営表示==
         //#######################################
@@ -143,6 +146,15 @@ class SetEverythingUpPatch
         string CustomWinnerText = "";
         string AdditionalWinnerText = "";
         string CustomWinnerColor = Utils.GetRoleColorCode(CustomRoles.Crewmate);
+
+        if (Options.CurrentGameMode == CustomGameMode.FFA)
+        {
+            var winnerId = CustomWinnerHolder.WinnerIds.FirstOrDefault();
+            __instance.BackgroundBar.material.color = new Color32(0, 255, 255, 255);
+            WinnerText.text = Main.AllPlayerNames[winnerId] + " wins!";
+            WinnerText.color = Main.PlayerColors[winnerId];
+            goto EndOfText;
+        }
 
         var winnerRole = (CustomRoles)CustomWinnerHolder.WinnerTeam;
         if (winnerRole >= 0)
@@ -250,6 +262,8 @@ class SetEverythingUpPatch
             return name;
         }
 
+    EndOfText:
+
         LastWinsText = WinnerText.text.RemoveHtmlTags();
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -265,18 +279,32 @@ class SetEverythingUpPatch
 
         StringBuilder sb = new($"{GetString("RoleSummaryText")}");
         List<byte> cloneRoles = new(Main.PlayerStates.Keys);
-        foreach (var id in Main.winnerList)
+        foreach (var id in Main.winnerList.ToArray())
         {
             if (EndGamePatch.SummaryText[id].Contains("<INVALID:NotAssigned>")) continue;
             sb.Append($"\n<color={CustomWinnerColor}>★</color> ").Append(EndGamePatch.SummaryText[id]);
             cloneRoles.Remove(id);
         }
-        foreach (var id in cloneRoles)
+        if (Options.CurrentGameMode == CustomGameMode.FFA)
         {
-            if (EndGamePatch.SummaryText[id].Contains("<INVALID:NotAssigned>")) continue;
-            sb.Append($"\n　 ").Append(EndGamePatch.SummaryText[id]);
-        }
+            List<(int, byte)> list = new();
+            foreach (byte id in cloneRoles.ToArray())
+            {
+                list.Add((FFAManager.GetRankOfScore(id), id));
+            }
 
+            list.Sort();
+            foreach (var id in list.Where(x => EndGamePatch.SummaryText.ContainsKey(x.Item2)))
+                sb.Append($"\n　 ").Append(EndGamePatch.SummaryText[id.Item2]);
+        }
+        else
+        { 
+            foreach (var id in cloneRoles.ToArray())
+            {
+                if (EndGamePatch.SummaryText[id].Contains("<INVALID:NotAssigned>")) continue;
+                sb.Append($"\n　 ").Append(EndGamePatch.SummaryText[id]);
+            }
+        }
         var RoleSummary = RoleSummaryObject.GetComponent<TMPro.TextMeshPro>();
         {
             RoleSummary.alignment = TMPro.TextAlignmentOptions.TopLeft;

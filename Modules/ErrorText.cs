@@ -49,7 +49,11 @@ public class ErrorText : MonoBehaviour
     public Vector3 TextOffset = new(0, 0.3f, -1000f);
     public void Update()
     {
-        AllErrors.ForEach(err => err.IncreaseTimer());
+        foreach (var error in AllErrors.ToArray())
+        {
+            error.IncreaseTimer();
+        }
+
         var ToRemove = AllErrors.Where(err => err.ErrorLevel <= 1 && 30f < err.Timer);
         if (ToRemove.Any())
         {
@@ -87,7 +91,7 @@ public class ErrorText : MonoBehaviour
     {
         string text = "";
         int maxLevel = 0;
-        foreach (var err in AllErrors)
+        foreach (var err in AllErrors.ToArray())
         {
             text += $"{err}: {err.Message}\n";
             if (maxLevel < err.ErrorLevel) maxLevel = err.ErrorLevel;

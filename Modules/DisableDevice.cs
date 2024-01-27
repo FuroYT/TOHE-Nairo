@@ -21,12 +21,14 @@ class DisableDevice
         ["PolusRightAdmin"] = new Vector2 (24.66f, -21.52f),
         ["PolusCamera"] = new Vector2 (2.96f, -12.74f),
         ["PolusVital"] = new Vector2 (26.70f, -15.94f),
+        ["DleksAdmin"] = new Vector2 (-3.48f, -8.62f),
+        ["DleksCamera"] = new Vector2 (13.06f, -2.45f),
         ["AirshipCockpitAdmin"] = new Vector2 (-22.32f, 0.91f),
         ["AirshipRecordsAdmin"] = new Vector2 (19.89f, 12.60f),
         ["AirshipCamera"] = new Vector2 (8.10f, -9.63f),
         ["AirshipVital"] = new Vector2 (25.24f, -7.94f),
-        ["FungleCamera"] = new Vector2(6.20f, 0.10f), //1.8
-        ["FungleVital"] = new Vector2(-2.50f, -9.80f) //1.3
+        ["FungleCamera"] = new Vector2(6.20f, 0.10f),
+        ["FungleVital"] = new Vector2(-2.50f, -9.80f)
     };
     public static float UsableDistance()
     {
@@ -36,7 +38,7 @@ class DisableDevice
             MapNames.Skeld => 1.8f,
             MapNames.Mira => 2.4f,
             MapNames.Polus => 1.8f,
-            //MapNames.Dleks => 1.5f,
+            MapNames.Dleks => 1.5f,
             MapNames.Airship => 1.8f,
             MapNames.Fungle => 1.8f,
             _ => 0.0f
@@ -48,6 +50,7 @@ class DisableDevice
         if (frame != 0) return;
 
         if (!DoDisable) return;
+
         foreach (var pc in Main.AllPlayerControls)
         {
             try
@@ -88,6 +91,12 @@ class DisableDevice
                             if (Options.DisablePolusVital.GetBool())
                                 doComms |= Vector2.Distance(PlayerPos, DevicePos["PolusVital"]) <= UsableDistance();
                             break;
+                        case 3:
+                            if (Options.DisableSkeldAdmin.GetBool())
+                                doComms |= Vector2.Distance(PlayerPos, DevicePos["DleksAdmin"]) <= UsableDistance();
+                            if (Options.DisableSkeldCamera.GetBool())
+                                doComms |= Vector2.Distance(PlayerPos, DevicePos["DleksCamera"]) <= UsableDistance();
+                            break;
                         case 4:
                             if (Options.DisableAirshipCockpitAdmin.GetBool())
                                 doComms |= Vector2.Distance(PlayerPos, DevicePos["AirshipCockpitAdmin"]) <= UsableDistance();
@@ -112,15 +121,15 @@ class DisableDevice
                     if (!DesyncComms.Contains(pc.PlayerId))
                         DesyncComms.Add(pc.PlayerId);
 
-                    pc.RpcDesyncRepairSystem(SystemTypes.Comms, 128);
+                    pc.RpcDesyncUpdateSystem(SystemTypes.Comms, 128);
                 }
                 else if (!Utils.IsActive(SystemTypes.Comms) && DesyncComms.Contains(pc.PlayerId))
                 {
                     DesyncComms.Remove(pc.PlayerId);
-                    pc.RpcDesyncRepairSystem(SystemTypes.Comms, 16);
+                    pc.RpcDesyncUpdateSystem(SystemTypes.Comms, 16);
 
-                    if (Main.NormalOptions.MapId == 1)
-                        pc.RpcDesyncRepairSystem(SystemTypes.Comms, 17);
+                    if (Main.NormalOptions.MapId is 1 or 5) // Mira HQ or The Fungle
+                        pc.RpcDesyncUpdateSystem(SystemTypes.Comms, 17);
                 }
             }
             catch (Exception ex)
@@ -154,6 +163,7 @@ public class RemoveDisableDevicesPatch
         switch (Main.NormalOptions.MapId)
         {
             case 0:
+            case 3:
                 if (Options.DisableSkeldAdmin.GetBool())
                     admins[0].gameObject.GetComponent<CircleCollider2D>().enabled = false || ignore;
                 if (Options.DisableSkeldCamera.GetBool())

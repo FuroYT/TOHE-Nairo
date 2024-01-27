@@ -1,13 +1,13 @@
-using TMPro;
-using System;
 using HarmonyLib;
-using UnityEngine;
-using System.Linq;
-using UnityEngine.UI;
+using System;
 using System.Collections.Generic;
-using Object = UnityEngine.Object;
-using static TOHE.Translator;
+using System.Linq;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 using static TOHE.Credentials;
+using static TOHE.Translator;
+using Object = UnityEngine.Object;
 
 namespace TOHE;
 
@@ -23,6 +23,8 @@ public static class MainMenuManagerPatch
     private static PassiveButton nairoDiscordButton;
     //private static PassiveButton patreonButton;
 
+    public static PassiveButton updateButton;
+
     [HarmonyPatch(typeof(MainMenuManager), nameof(MainMenuManager.LateUpdate)), HarmonyPostfix]
     public static void Postfix(MainMenuManager __instance)
     {
@@ -30,6 +32,18 @@ public static class MainMenuManagerPatch
         __instance.playButton.transform.gameObject.SetActive(Options.IsLoaded);
         if (TitleLogoPatch.LoadingHint != null)
             TitleLogoPatch.LoadingHint.SetActive(!Options.IsLoaded);
+        var PlayOnlineButton = __instance.PlayOnlineButton;
+        if (PlayOnlineButton != null)
+        {
+            if (RunLoginPatch.isAllowedOnline && !Main.hasAccess)
+            {
+                var PlayLocalButton = __instance.playLocalButton;
+                if (PlayLocalButton != null) PlayLocalButton.gameObject.SetActive(false);
+
+                PlayOnlineButton.gameObject.SetActive(false);
+                DisconnectPopup.Instance.ShowCustom(GetString("NoAccess"));
+            }
+        }
     }
 
     [HarmonyPatch(nameof(MainMenuManager.Start)), HarmonyPostfix, HarmonyPriority(Priority.Normal)]
@@ -61,12 +75,12 @@ public static class MainMenuManagerPatch
 
         leftPanel.gameObject.GetComponent<SpriteRenderer>().enabled = false;
         leftPanel.gameObject.FindChild<SpriteRenderer>("Divider").enabled = false;
-        leftPanel.GetComponentsInChildren<SpriteRenderer>(true).Where(r => r.name == "Shine").ForEach(r => r.enabled = false);
+        leftPanel.GetComponentsInChildren<SpriteRenderer>(true).Where(r => r.name == "Shine").ToList().ForEach(r => r.enabled = false);
 
         GameObject splashArt = new("SplashArt");
         splashArt.transform.position = new Vector3(0, 0f, 600f); //= new Vector3(0, 0.40f, 600f);
         var spriteRenderer = splashArt.AddComponent<SpriteRenderer>();
-        string bgImage = "TOH-RE-Background-New.png";
+        string bgImage = "TOHE-Background-1.4.0.png";
         if (Main.oldMainMenuBg.Value) bgImage = "TOH-RE-Background-Unused.png";
         spriteRenderer.sprite = Utils.LoadSprite($"TOHE.Resources.Background.{bgImage}", 150f);
 
@@ -157,7 +171,7 @@ public static class MainMenuManagerPatch
                 new(84, 0, 98, byte.MaxValue),
                 new(215, 0, 248, byte.MaxValue),
                 () => Application.OpenURL(Main.nairoUrls[0]),
-                "Twitch Naïro");
+                "Twitch Na�ro");
         }
         twitchButton.gameObject.SetActive(Main.nairoVisible[0]);
 
@@ -170,7 +184,7 @@ public static class MainMenuManagerPatch
                 new(88, 101, 242, byte.MaxValue),
                 new(148, 161, byte.MaxValue, byte.MaxValue),
                 () => Application.OpenURL(Main.nairoUrls[1]),
-                "Discord Naïro");
+                "Discord Na�ro");
         }
         nairoDiscordButton.gameObject.SetActive(Main.nairoVisible[1]);
 
@@ -186,6 +200,20 @@ public static class MainMenuManagerPatch
                 GetString("kofi")); //"Kofi"
         }
         kofiButton.gameObject.SetActive(Main.ShowKofiButton);
+
+        // update Button
+        if (updateButton == null)
+        {
+            updateButton = CreateButton(
+                "updateButton",
+                new(3.68f, -2.68f, 1f),
+                new(255, 165, 0, byte.MaxValue),
+                new(255, 200, 0, byte.MaxValue),
+                () => ModUpdater.StartUpdate(ModUpdater.downloadUrl, true),
+                GetString("update")); //"Update"
+            updateButton.transform.localScale = Vector3.one;
+        }
+        updateButton.gameObject.SetActive(ModUpdater.hasUpdate);
 
         // GitHub Button
         if (gitHubButton == null)
@@ -308,33 +336,11 @@ public static class MainMenuManagerPatch
     [HarmonyPostfix]
     public static void OpenMenuPostfix()
     {
-        if (Credentials.ToheLogo != null) Credentials.ToheLogo.gameObject.SetActive(false);
+        if (ToheLogo != null) ToheLogo.gameObject.SetActive(false);
     }
     [HarmonyPatch(nameof(MainMenuManager.ResetScreen)), HarmonyPostfix]
     public static void ResetScreenPostfix()
     {
-        if (Credentials.ToheLogo != null) Credentials.ToheLogo.gameObject.SetActive(true);
-    }
-}
-
-// 来源：https://github.com/ykundesu/SuperNewRoles/blob/master/SuperNewRoles/Patches/HorseModePatch.cs
-[HarmonyPatch(typeof(Constants), nameof(Constants.ShouldHorseAround))]
-public static class HorseModePatch
-{
-    public static bool isHorseMode = false;
-    public static bool Prefix(ref bool __result)
-    {
-        __result = isHorseMode;
-        return false;
-    }
-}
-[HarmonyPatch(typeof(Constants), nameof(Constants.ShouldFlipSkeld))]
-public static class DleksPatch
-{
-    public static bool isDleks = false;
-    public static bool Prefix(ref bool __result)
-    {
-        __result = isDleks;
-        return false;
+        if (ToheLogo != null) ToheLogo.gameObject.SetActive(true);
     }
 }

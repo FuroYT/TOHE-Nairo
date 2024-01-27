@@ -11,7 +11,7 @@ namespace TOHE.Roles.Impostor;
 
 public static class EvilTracker
 {
-    private static readonly int Id = 500;
+    private static readonly int Id = 1400;
     private static List<byte> playerIdList = new();
     public static bool IsEnable = false;
 
@@ -120,7 +120,7 @@ public static class EvilTracker
         SetTarget(shapeshifter.PlayerId, target.PlayerId);
         Logger.Info($"{shapeshifter.GetNameWithRole()}のターゲットを{target.GetNameWithRole()}に設定", "EvilTrackerTarget");
         shapeshifter.MarkDirtySettings();
-        Utils.NotifyRoles();
+        Utils.NotifyRoles(SpecifySeer: shapeshifter, SpecifyTarget: target, ForceLoop: true);
     }
     public static void AfterMeetingTasks()
     {
@@ -187,7 +187,7 @@ public static class EvilTracker
         ImpostorsId[trackerId].RemoveWhere(id => Main.PlayerStates[id].IsDead);
 
         var sb = new StringBuilder(80);
-        if (ImpostorsId[trackerId].Any())
+        if (ImpostorsId[trackerId].Count > 0)
         {
             sb.Append($"<color={Utils.GetRoleColorCode(CustomRoles.Impostor)}>");
             foreach (var impostorId in ImpostorsId[trackerId])

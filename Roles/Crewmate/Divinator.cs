@@ -1,3 +1,4 @@
+using Hazel;
 using System.Collections.Generic;
 using static TOHE.Options;
 using static TOHE.Translator;
@@ -6,7 +7,7 @@ namespace TOHE.Roles.Crewmate;
 
 public static class Divinator
 {
-    private static readonly int Id = 6700;
+    private static readonly int Id = 8000;
     private static List<byte> playerIdList = new();
     public static bool IsEnable = false;
 
@@ -16,7 +17,7 @@ public static class Divinator
     public static OptionItem ShowSpecificRole;
     public static OptionItem AbilityUseGainWithEachTaskCompleted;
 
-    public static List<byte> didVote = new();
+    public static HashSet<byte> didVote = new();
     public static Dictionary<byte, float> CheckLimit = new();
     public static Dictionary<byte, float> TempCheckLimit = new();
 
@@ -45,6 +46,42 @@ public static class Divinator
         CheckLimit.TryAdd(playerId, CheckLimitOpt.GetInt());
         IsEnable = true;
     }
+
+    public static void SendRPC(byte playerId, bool isTemp = false, bool voted = false)
+    {
+        MessageWriter writer;
+        if (!isTemp)
+        {
+            writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.SetDivinatorLimit, SendOption.Reliable, -1);
+            writer.Write(playerId);
+            writer.Write(CheckLimit[playerId]);
+            writer.Write(voted);
+        }
+        else
+        {
+            writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.SetDivinatorTempLimit, SendOption.Reliable, -1);
+            writer.Write(playerId);
+            writer.Write(TempCheckLimit[playerId]);
+        }
+        AmongUsClient.Instance.FinishRpcImmediately(writer);
+    }
+    public static void ReceiveRPC(MessageReader reader, bool isTemp = false)
+    {
+        byte playerId = reader.ReadByte();
+        float limit = reader.ReadSingle();
+        if (!isTemp)
+        {
+            CheckLimit[playerId] = limit;
+            bool voted = reader.ReadBoolean();
+            if (voted && !didVote.Contains(playerId)) didVote.Add(playerId);
+        }
+        else
+        {
+            TempCheckLimit[playerId] = limit;
+            didVote.Remove(playerId);
+        }
+    }
+
     public static void OnVote(PlayerControl player, PlayerControl target)
     {
         if (player == null || target == null) return;
@@ -58,6 +95,7 @@ public static class Divinator
         }
 
         CheckLimit[player.PlayerId] -= 1;
+        SendRPC(player.PlayerId, voted: true);
 
         if (player.PlayerId == target.PlayerId)
         {
@@ -173,13 +211,15 @@ public static class Divinator
                 CustomRoles.CursedSoul or
                 CustomRoles.Cleanser or
                 CustomRoles.CursedWolf or
-                CustomRoles.President
+                CustomRoles.President or 
+                CustomRoles.Keeper
                 => "Result10",
 
                 CustomRoles.Addict or
                 CustomRoles.Escapee or
                 CustomRoles.Miner or
                 CustomRoles.Bastion or
+                CustomRoles.Mole or
                 CustomRoles.Chronomancer or
                 CustomRoles.Alchemist or
                 CustomRoles.Morphling
@@ -189,6 +229,7 @@ public static class Divinator
                 CustomRoles.Zombie or
                 CustomRoles.CyberStar or
                 CustomRoles.SuperStar or
+                CustomRoles.Captain or
                 CustomRoles.Deathpact or
                 CustomRoles.Investigator or
                 CustomRoles.Devourer
@@ -208,6 +249,7 @@ public static class Divinator
                 CustomRoles.Mastermind or
                 CustomRoles.Pickpocket or
                 CustomRoles.Spy or
+                CustomRoles.Randomizer or
                 CustomRoles.Vindicator
                 => "Result14",
 
@@ -215,7 +257,8 @@ public static class Divinator
                 CustomRoles.Virus or
                 CustomRoles.Monarch or
                 CustomRoles.Revolutionist or
-                CustomRoles.Succubus
+                CustomRoles.Succubus or
+                CustomRoles.Enigma
                 => "Result15",
 
                 CustomRoles.Innocent or
@@ -223,6 +266,7 @@ public static class Divinator
                 CustomRoles.Inhibitor or
                 CustomRoles.SabotageMaster or
                 CustomRoles.Shaman or
+                CustomRoles.Pixie or
                 CustomRoles.Saboteur
                 => "Result16",
 
@@ -231,7 +275,8 @@ public static class Divinator
                 CustomRoles.Jester or
                 CustomRoles.Lurker or
                 CustomRoles.Swapper or
-                CustomRoles.Sunnyboy
+                CustomRoles.Sunnyboy or
+                CustomRoles.Instigator
                 => "Result17",
 
                 CustomRoles.Mafia or
@@ -246,6 +291,8 @@ public static class Divinator
 
                 CustomRoles.EvilGuesser or
                 CustomRoles.NiceGuesser or
+                CustomRoles.Doomsayer or
+                CustomRoles.GuessMaster or
                 CustomRoles.DarkHide or
                 CustomRoles.Camouflager or
                 CustomRoles.Chameleon or
@@ -280,9 +327,10 @@ public static class Divinator
                 CustomRoles.Divinator or
                 CustomRoles.EvilDiviner or
                 CustomRoles.PotionMaster or
-                //CustomRoles.Occultist or
+                //CustomRoles.Occultist or <-- Also removed from divinator LANG 
+                CustomRoles.Kamikaze or
                 CustomRoles.HexMaster or
-                CustomRoles.Witch
+                CustomRoles.Witch 
                 => "Result23",
 
                 CustomRoles.Needy or
@@ -329,9 +377,12 @@ public static class Divinator
                 => "Result28",
 
                 CustomRoles.Crewpostor or
+                CustomRoles.Taskinator or
+                CustomRoles.Benefactor or
                 CustomRoles.Marshall or
                 CustomRoles.Workaholic or
                 CustomRoles.Phantom or
+                CustomRoles.Solsticer or
                 CustomRoles.NiceMini or
                 CustomRoles.EvilMini or
                 CustomRoles.Terrorist
@@ -496,9 +547,10 @@ public static class Divinator
     public static void OnReportDeadBody()
     {
         didVote.Clear();
-        foreach (var divinatorId in playerIdList)
+        foreach (var divinatorId in CheckLimit.Keys)
         {
             TempCheckLimit[divinatorId] = CheckLimit[divinatorId];
+            SendRPC(divinatorId, isTemp: true);
         }
     }
 }

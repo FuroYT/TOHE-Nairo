@@ -9,7 +9,7 @@ namespace TOHE.Roles.Impostor;
 
 public static class Hacker
 {
-    private static readonly int Id = 2200;
+    private static readonly int Id = 5300;
     private static List<byte> playerIdList = new();
     public static bool IsEnable = false;
 
@@ -92,7 +92,7 @@ public static class Hacker
         }
 
         // 未找到骇客击杀的尸体，寻找其他尸体
-        if (targetId == byte.MaxValue && DeadBodyList.Any())
+        if (targetId == byte.MaxValue && DeadBodyList.Count > 0)
             targetId = DeadBodyList[IRandom.Instance.Next(0, DeadBodyList.Count)];
 
         if (targetId == byte.MaxValue)

@@ -4,10 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TOHE.Modules;
+using TOHE.Roles.AddOns.Common;
 using TOHE.Roles.Crewmate;
 using TOHE.Roles.Neutral;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 namespace TOHE;
 
@@ -58,6 +58,7 @@ public class PlayerState
     {
         MainRole = role;
         countTypes = role.GetCountTypes();
+        var pc = Utils.GetPlayerById(PlayerId);
         if (role == CustomRoles.DarkHide)
         {
             if (!DarkHide.SnatchesWin.GetBool())
@@ -80,13 +81,104 @@ public class PlayerState
                 countTypes = CountTypes.Crew;
             }
         }
+        if (role == CustomRoles.Opportunist)
+        {
+            if (AmongUsClient.Instance.AmHost)
+            {
+                if (!pc.HasImpKillButton(considerVanillaShift: true))
+                {
+                    var taskstate = pc.GetPlayerTaskState();
+                    if (taskstate != null)
+                    {
+                        GameData.Instance.RpcSetTasks(pc.PlayerId, new byte[0]);
+                        taskstate.CompletedTasksCount = 0;
+                        taskstate.AllTasksCount = pc.Data.Tasks.Count;
+                        taskstate.hasTasks = true;
+                    }
+                }
+            }
+        }
+        // check for role addon
+        if (pc.Is(CustomRoles.Madmate))
+        {
+            countTypes = Options.MadmateCountMode.GetInt() switch
+            {
+                0 => CountTypes.OutOfGame,
+                1 => CountTypes.Impostor,
+                2 => countTypes,
+                _ => throw new NotImplementedException()
+            };
+        }
+        if (pc.Is(CustomRoles.Charmed))
+        {
+            countTypes = Succubus.CharmedCountMode.GetInt() switch
+            {
+                0 => CountTypes.OutOfGame,
+                1 => CountTypes.Succubus,
+                2 => countTypes,
+                _ => throw new NotImplementedException()
+            };
+        }
+        if (pc.Is(CustomRoles.Recruit))
+        {
+            countTypes = Jackal.SidekickCountMode.GetInt() switch
+            {
+                0 => CountTypes.Jackal,
+                1 => CountTypes.OutOfGame,
+                2 => countTypes,
+                _ => throw new NotImplementedException()
+            };
+        }
+        if (pc.Is(CustomRoles.Infected))
+        {
+            countTypes = CountTypes.Infectious;
+        }
+        if (pc.Is(CustomRoles.Contagious))
+        {
+            countTypes = Virus.ContagiousCountMode.GetInt() switch
+            {
+                0 => CountTypes.OutOfGame,
+                1 => CountTypes.Virus,
+                2 => countTypes,
+                _ => throw new NotImplementedException()
+            };
+        }
+        if (pc.Is(CustomRoles.Rogue))
+        {
+            countTypes = CountTypes.Rogue;
+        }
+        if (pc.Is(CustomRoles.Admired))
+        {
+            countTypes = CountTypes.Crew;
+        }
+        if (pc.Is(CustomRoles.Soulless))
+        {
+            countTypes = CountTypes.OutOfGame;
+        }
+
     }
-    public void SetSubRole(CustomRoles role, bool AllReplace = false)
+    public void SetSubRole(CustomRoles role, bool AllReplace = false, PlayerControl pc = null)
     {
         if (role == CustomRoles.Cleansed)
+        {
+            if (pc != null) countTypes = pc.GetCustomRole().GetCountTypes();
             AllReplace = true;
+        }
         if (AllReplace)
-            SubRoles.ToArray().Do(role => SubRoles.Remove(role));
+        {
+            var sync = false;
+            foreach (var subRole in SubRoles.ToArray())
+            {
+                if (pc.Is(CustomRoles.Flash))
+                {
+                    Flash.SetSpeed(pc.PlayerId, true);
+                    sync = true;
+                }
+                SubRoles.Remove(subRole);
+
+                if (sync) Utils.MarkEveryoneDirtySettings();
+            }
+        }
 
         if (!SubRoles.Contains(role))
             SubRoles.Add(role);
@@ -97,7 +189,7 @@ public class PlayerState
             {
                 0 => CountTypes.OutOfGame,
                 1 => CountTypes.Impostor,
-                2 => CountTypes.Crew,
+                2 => countTypes,
                 _ => throw new NotImplementedException()
             };
             SubRoles.Remove(CustomRoles.Charmed);
@@ -152,7 +244,7 @@ public class PlayerState
             SubRoles.Remove(CustomRoles.Loyal);
             SubRoles.Remove(CustomRoles.Loyal);
             SubRoles.Remove(CustomRoles.Admired);
-        }
+        } 
         if (role == CustomRoles.Infected)
         {
             countTypes = CountTypes.Infectious;
@@ -246,11 +338,11 @@ public class PlayerState
         if (AmongUsClient.Instance.AmHost)
         {
             RPC.SendDeathReason(PlayerId, deathReason);
+            if (GameStates.IsMeeting)
+            {
+                MeetingHud.Instance.CheckForEndVoting();
+            }
         }
-    }
-    public void SetAlive()
-    {
-        IsDead = false;
     }
     public bool IsSuicide() { return deathReason == DeathReason.Suicide; }
     public TaskState GetTaskState() { return taskState; }
@@ -302,6 +394,8 @@ public class PlayerState
         Drained,
         Shattered,
         Trap,
+        Targeted,
+        Retribution,
 
         etc = -1,
     }
@@ -358,6 +452,7 @@ public class TaskState
 
         if (AmongUsClient.Instance.AmHost)
         {
+            if (player.Is(CustomRoles.Captain)) Captain.OnTaskComplete(player);
             //FIXME:SpeedBooster class transplant
             if (player.IsAlive()
             && player.Is(CustomRoles.SpeedBooster)
@@ -406,24 +501,24 @@ public class TaskState
             && player.Is(CustomRoles.Transporter)
             && ((CompletedTasksCount + 1) <= Options.TransporterTeleportMax.GetInt()))
             {
-                Logger.Info("传送师触发传送:" + player.GetNameWithRole(), "Transporter");
+                Logger.Info("Transporter: " + player.GetNameWithRole() + " completed the task", "Transporter");
                 var rd = IRandom.Instance;
-                List<PlayerControl> AllAlivePlayer = new();
-                foreach (var pc in Main.AllAlivePlayerControls.Where(x => x.CanBeTeleported())) AllAlivePlayer.Add(pc);
+                List<PlayerControl> AllAlivePlayer = Main.AllAlivePlayerControls.Where(x => x.CanBeTeleported()).ToList();
                 if (AllAlivePlayer.Count >= 2)
                 {
                     var tar1 = AllAlivePlayer[rd.Next(0, AllAlivePlayer.Count)];
                     AllAlivePlayer.Remove(tar1);
                     var tar2 = AllAlivePlayer[rd.Next(0, AllAlivePlayer.Count)];
-                    var posTar1 = tar1.GetTruePosition();
-                    tar1.RpcTeleport(tar2.GetTruePosition());
+                    var posTar1 = tar1.GetCustomPosition();
+                    tar1.RpcTeleport(tar2.GetCustomPosition());
                     tar2.RpcTeleport(posTar1);
+                    AllAlivePlayer.Clear();
                     tar1.RPCPlayCustomSound("Teleport");
                     tar2.RPCPlayCustomSound("Teleport");
                     tar1.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Transporter), string.Format(Translator.GetString("TeleportedByTransporter"), tar2.GetRealName())));
                     tar2.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Transporter), string.Format(Translator.GetString("TeleportedByTransporter"), tar1.GetRealName())));
                 }
-                else if (player.Is(CustomRoles.Transporter))
+                else
                 {
                     player.Notify(Utils.ColorString(Utils.GetRoleColor(CustomRoles.Impostor), string.Format(Translator.GetString("ErrorTeleport"), player.GetRealName())));
                 }
@@ -431,11 +526,10 @@ public class TaskState
             if (player.Is(CustomRoles.Unlucky) && player.IsAlive())
             {
                 var Ue = IRandom.Instance;
-                if (Ue.Next(0, 100) < Options.UnluckyTaskSuicideChance.GetInt())
+                if (Ue.Next(1, 100) <= Options.UnluckyTaskSuicideChance.GetInt())
                 {
-                    player.RpcMurderPlayerV3(player);
                     Main.PlayerStates[player.PlayerId].deathReason = PlayerState.DeathReason.Suicide;
-
+                    player.RpcMurderPlayerV3(player);
                 }
             }
             if (player.Is(CustomRoles.Bloodlust) && player.IsAlive() && !Alchemist.BloodlustList.ContainsKey(player.PlayerId))
@@ -449,6 +543,7 @@ public class TaskState
             if (player.Is(CustomRoles.Divinator) && player.IsAlive())
             {
                 Divinator.CheckLimit[player.PlayerId] += Divinator.AbilityUseGainWithEachTaskCompleted.GetFloat();
+                Divinator.SendRPC(player.PlayerId);
             }
             if (player.Is(CustomRoles.Veteran) && player.IsAlive())
             {
@@ -477,19 +572,22 @@ public class TaskState
             if (player.Is(CustomRoles.Mediumshiper) && player.IsAlive())
             {
                 Mediumshiper.ContactLimit[player.PlayerId] += Mediumshiper.MediumAbilityUseGainWithEachTaskCompleted.GetFloat();
+                Mediumshiper.SendRPC(player.PlayerId);
             }
             if (player.Is(CustomRoles.ParityCop) && player.IsAlive())
             {
                 ParityCop.MaxCheckLimit[player.PlayerId] += ParityCop.ParityAbilityUseGainWithEachTaskCompleted.GetFloat();
+                ParityCop.SendRPC(player.PlayerId, 2);
             }
             if (player.Is(CustomRoles.Oracle) && player.IsAlive())
             {
                 Oracle.CheckLimit[player.PlayerId] += Oracle.OracleAbilityUseGainWithEachTaskCompleted.GetFloat();
+                Oracle.SendRPC(player.PlayerId);
             }
-            /*        if (player.Is(CustomRoles.Cleanser) && player.IsAlive())
-                    {
-                        Cleanser.CleanserUses[player.PlayerId] += Cleanser.AbilityUseGainWithEachTaskCompleted.GetInt();
-                    } */
+    /*        if (player.Is(CustomRoles.Cleanser) && player.IsAlive())
+            {
+                Cleanser.CleanserUses[player.PlayerId] += Cleanser.AbilityUseGainWithEachTaskCompleted.GetInt();
+            } */
             if (player.Is(CustomRoles.SabotageMaster) && player.IsAlive())
             {
                 SabotageMaster.UsedSkillCount[player.PlayerId] -= SabotageMaster.SMAbilityUseGainWithEachTaskCompleted.GetFloat();
@@ -498,14 +596,17 @@ public class TaskState
             if (player.Is(CustomRoles.Tracker) && player.IsAlive())
             {
                 Tracker.TrackLimit[player.PlayerId] += Tracker.TrackerAbilityUseGainWithEachTaskCompleted.GetFloat();
+                Tracker.SendRPC(2, player.PlayerId);
             }
             if (player.Is(CustomRoles.Bloodhound) && player.IsAlive())
             {
                 Bloodhound.UseLimit[player.PlayerId] += Bloodhound.BloodhoundAbilityUseGainWithEachTaskCompleted.GetFloat();
+                Bloodhound.SendRPCLimit(player.PlayerId, operate:2);
             }
             if (player.Is(CustomRoles.Chameleon) && player.IsAlive())
             {
                 Chameleon.UseLimit[player.PlayerId] += Chameleon.ChameleonAbilityUseGainWithEachTaskCompleted.GetFloat();
+                Chameleon.SendRPC(player, isLimit: true);
             }
             if (player.Is(CustomRoles.Spy) && player.IsAlive())
             {
@@ -515,11 +616,13 @@ public class TaskState
             }
 
             if (player.Is(CustomRoles.Ghoul) && (CompletedTasksCount + 1) >= AllTasksCount && player.IsAlive())
-                _ = new LateTask(() =>
-                {
-                    player.RpcMurderPlayerV3(player);
-                    Main.PlayerStates[player.PlayerId].deathReason = PlayerState.DeathReason.Suicide;
-                }, 0.2f, "Ghoul Suicide");
+            _ = new LateTask(() =>
+            {
+                Main.PlayerStates[player.PlayerId].deathReason = PlayerState.DeathReason.Suicide;
+                player.RpcMurderPlayerV3(player);
+                
+            }, 0.2f, "Ghoul Suicide");
+            
             if (player.Is(CustomRoles.Ghoul) && (CompletedTasksCount + 1) >= AllTasksCount && !player.IsAlive())
             {
                 foreach (var pc in Main.AllPlayerControls)
@@ -528,8 +631,9 @@ public class TaskState
                     {
                         if (Main.KillGhoul.Contains(pc.PlayerId) && player.PlayerId != pc.PlayerId && pc.IsAlive())
                         {
-                            player.RpcMurderPlayerV3(pc);
                             Main.PlayerStates[pc.PlayerId].deathReason = PlayerState.DeathReason.Kill;
+                            player.RpcMurderPlayerV3(pc);
+                                                   
                         }
                     }
 
@@ -554,14 +658,9 @@ public class TaskState
                         pc.SetRealKiller(player);
                     }
                 }
-                if (!player.Is(CustomRoles.Admired))
+                if (!CustomWinnerHolder.CheckForConvertedWinner(player.PlayerId))
                 {
                     CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Workaholic); //Workaholic
-                    CustomWinnerHolder.WinnerIds.Add(player.PlayerId);
-                }
-                if (player.Is(CustomRoles.Admired))
-                {
-                    CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Crewmate); //Admired Workaholic
                     CustomWinnerHolder.WinnerIds.Add(player.PlayerId);
                 }
             }
@@ -585,36 +684,33 @@ public class TaskState
                 }
                 else
                 {
-
+                    list = list.OrderBy(x => Vector2.Distance(player.transform.position, x.transform.position)).ToList();
+                    var target = list[0];
+                    
+                    if (!target.Is(CustomRoles.Pestilence))
                     {
-                        list = list.OrderBy(x => Vector2.Distance(player.transform.position, x.transform.position)).ToList();
-                        var target = list[0];
-                        if (!target.Is(CustomRoles.Pestilence))
-                        {
-                            if (!Options.CrewpostorLungeKill.GetBool())
-                            {
-                                target.SetRealKiller(player);
-                                target.RpcCheckAndMurder(target);
-                                player.RpcGuardAndKill();
-                                Logger.Info("No lunge mode kill", "Crewpostor");
-                            }
-                            else
-                            {
-                                target.SetRealKiller(player);
-                                player.RpcMurderPlayerV3(target);
-                                player.RpcGuardAndKill();
-                                Logger.Info("lunge mode kill", "Crewpostor");
-
-                            }
-                            Logger.Info($"Crewpostor completed task to kill：{player.GetNameWithRole()} => {target.GetNameWithRole()}", "Crewpostor");
-                        }
-                        if (target.Is(CustomRoles.Pestilence))
-                        {
-                            player.SetRealKiller(target);
-                            target.RpcMurderPlayerV3(player);
+                        if (!Options.CrewpostorLungeKill.GetBool())
+                        { 
+                            target.SetRealKiller(player);
+                            target.RpcCheckAndMurder(target);
                             player.RpcGuardAndKill();
-                            Logger.Info($"Crewpostor tried to kill pestilence (reflected back)：{target.GetNameWithRole()} => {player.GetNameWithRole()}", "Pestilence Reflect");
+                            Logger.Info("No lunge mode kill", "Crewpostor");
                         }
+                        else
+                        {
+                            target.SetRealKiller(player);
+                            player.RpcMurderPlayerV3(target);
+                            player.RpcGuardAndKill();
+                            Logger.Info("lunge mode kill", "Crewpostor");
+                        }
+                        Logger.Info($"Crewpostor completed task to kill：{player.GetNameWithRole()} => {target.GetNameWithRole()}", "Crewpostor");
+                    }
+                    if (target.Is(CustomRoles.Pestilence))
+                    {
+                        player.SetRealKiller(target);
+                        target.RpcMurderPlayerV3(player);
+                        player.RpcGuardAndKill();
+                        Logger.Info($"Crewpostor tried to kill pestilence (reflected back)：{target.GetNameWithRole()} => {player.GetNameWithRole()}", "Pestilence Reflect");
                     }
                 }
             }
@@ -622,6 +718,7 @@ public class TaskState
 
         //クリアしてたらカウントしない
         if (CompletedTasksCount >= AllTasksCount) return;
+        if (player.Is(CustomRoles.Solsticer) && !AmongUsClient.Instance.AmHost) return; //Solsticer task state is updated by host rpc
 
         CompletedTasksCount++;
 
@@ -654,7 +751,7 @@ public static class GameStates
 {
     public static bool InGame = false;
     public static bool AlreadyDied = false;
-    public static bool IsModHost => PlayerControl.AllPlayerControls.ToArray().FirstOrDefault(x => x.PlayerId == 0 && x.IsModClient());
+    public static bool IsModHost => Main.playerVersion.ContainsKey(AmongUsClient.Instance.HostId);
     public static bool IsLobby => AmongUsClient.Instance.GameState == AmongUsClient.GameStates.Joined;
     public static bool IsInGame => InGame;
     public static bool IsEnded => AmongUsClient.Instance.GameState == AmongUsClient.GameStates.Ended;
@@ -666,6 +763,7 @@ public static class GameStates
     public static bool IsMeeting => InGame && MeetingHud.Instance;
     public static bool IsVoting => IsMeeting && MeetingHud.Instance.state is MeetingHud.VoteStates.Voted or MeetingHud.VoteStates.NotVoted;
     public static bool IsProceeding => IsMeeting && MeetingHud.Instance.state is MeetingHud.VoteStates.Proceeding;
+    public static bool IsExilling => ExileController.Instance != null;
     public static bool IsCountDown => GameStartManager.InstanceExists && GameStartManager.Instance.startState == GameStartManager.StartingStates.Countdown;
     /**********TOP ZOOM.cs***********/
     public static bool IsShip => ShipStatus.Instance != null;

@@ -1,7 +1,10 @@
 using AmongUs.GameOptions;
 using HarmonyLib;
 using System;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using TOHE.Roles.Neutral;
 using UnityEngine;
@@ -15,28 +18,40 @@ class SetUpRoleTextPatch
     public static void Postfix(IntroCutscene __instance)
     {
         if (!GameStates.IsModHost) return;
+
         _ = new LateTask(() =>
         {
-            CustomRoles role = PlayerControl.LocalPlayer.GetCustomRole();
-
-            if (!role.IsVanilla())
+            PlayerControl localPlayer = PlayerControl.LocalPlayer;
+            CustomRoles role = localPlayer.GetCustomRole();
+            if (Options.CurrentGameMode == CustomGameMode.FFA)
             {
-                __instance.YouAreText.color = Utils.GetRoleColor(role);
-                __instance.RoleText.text = Utils.GetRoleName(role);
-                __instance.RoleText.color = Utils.GetRoleColor(role);
-                __instance.RoleBlurbText.color = Utils.GetRoleColor(role);
-                __instance.RoleBlurbText.text = PlayerControl.LocalPlayer.GetRoleInfo();
+                var color = ColorUtility.TryParseHtmlString("#00ffff", out var c) ? c : new(255, 255, 255, 255);
+                __instance.YouAreText.transform.gameObject.SetActive(false);
+                __instance.RoleText.text = "FREE FOR ALL";
+                __instance.RoleText.color = color;
+                __instance.RoleBlurbText.color = color;
+                __instance.RoleBlurbText.text = "KILL EVERYONE TO WIN";
             }
+            else 
+            { 
+                if (!role.IsVanilla())
+                {
+                    __instance.YouAreText.color = Utils.GetRoleColor(role);
+                    __instance.RoleText.text = Utils.GetRoleName(role);
+                    __instance.RoleText.color = Utils.GetRoleColor(role);
+                    __instance.RoleBlurbText.color = Utils.GetRoleColor(role);
+                    __instance.RoleBlurbText.text = localPlayer.GetRoleInfo();
+                }
 
-            foreach (var subRole in Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].SubRoles)
-                __instance.RoleBlurbText.text += "\n" + Utils.ColorString(Utils.GetRoleColor(subRole), GetString($"{subRole}Info"));
+                foreach (var subRole in Main.PlayerStates[localPlayer.PlayerId].SubRoles.ToArray())
+                    __instance.RoleBlurbText.text += "\n" + Utils.ColorString(Utils.GetRoleColor(subRole), GetString($"{subRole}Info"));
 
-            if (!PlayerControl.LocalPlayer.Is(CustomRoles.Lovers) && !PlayerControl.LocalPlayer.Is(CustomRoles.Ntr) && CustomRolesHelper.RoleExist(CustomRoles.Ntr))
-                __instance.RoleBlurbText.text += "\n" + Utils.ColorString(Utils.GetRoleColor(CustomRoles.Lovers), GetString($"{CustomRoles.Lovers}Info"));
+                if (!localPlayer.Is(CustomRoles.Lovers) && !localPlayer.Is(CustomRoles.Ntr) && CustomRoles.Ntr.RoleExist())
+                    __instance.RoleBlurbText.text += "\n" + Utils.ColorString(Utils.GetRoleColor(CustomRoles.Lovers), GetString($"{CustomRoles.Lovers}Info"));
 
-            __instance.RoleText.text += Utils.GetSubRolesText(PlayerControl.LocalPlayer.PlayerId, false, true);
-
-        }, 0.01f, "Override Role Text");
+                __instance.RoleText.text += Utils.GetSubRolesText(localPlayer.PlayerId, false, true);
+            }
+        }, 0.0001f, "Override Role Text");
     }
 }
 [HarmonyPatch(typeof(IntroCutscene), nameof(IntroCutscene.CoBegin))]
@@ -45,27 +60,65 @@ class CoBeginPatch
     public static void Prefix()
     {
         var logger = Logger.Handler("Info");
-        logger.Info("------------显示名称------------");
-        foreach (var pc in Main.AllPlayerControls)
+
+        var allPlayerControlsArray = Main.AllPlayerControls.ToArray();
+
+        logger.Info("------------Player Names------------");
+        foreach ( var pc in allPlayerControlsArray)
         {
             logger.Info($"{(pc.AmOwner ? "[*]" : ""),-3}{pc.PlayerId,-2}:{pc.name.PadRightV2(20)}:{pc.cosmetics.nameText.text}({Palette.ColorNames[pc.Data.DefaultOutfit.ColorId].ToString().Replace("Color", "")})");
             pc.cosmetics.nameText.text = pc.name;
         }
-        logger.Info("------------职业分配------------");
-        foreach (var pc in Main.AllPlayerControls)
+
+        logger.Info("------------Roles / Add-ons------------");
+        if (PlayerControl.LocalPlayer.FriendCode.GetDevUser().DeBug || GameStates.IsLocalGame)
         {
-            logger.Info($"{(pc.AmOwner ? "[*]" : ""),-3}{pc.PlayerId,-2}:{pc?.Data?.PlayerName?.PadRightV2(20)}:{pc.GetAllRoleName().RemoveHtmlTags()}");
+            foreach (var pc in allPlayerControlsArray)
+            {
+                logger.Info($"{(pc.AmOwner ? "[*]" : ""),-3}{pc.PlayerId,-2}:{pc?.Data?.PlayerName?.PadRightV2(20)}:{pc.GetAllRoleName().RemoveHtmlTags()}");
+            }
         }
-        logger.Info("------------运行环境------------");
-        foreach (var pc in Main.AllPlayerControls)
+        else
+        {
+            StringBuilder logStringBuilder = new StringBuilder();
+            logStringBuilder.AppendLine("------------Roles / Add-ons------------");
+
+            foreach (var pc in allPlayerControlsArray)
+            {
+                logStringBuilder.AppendLine($"{(pc.AmOwner ? "[*]" : ""),-3}{pc.PlayerId,-2}:{pc?.Data?.PlayerName?.PadRight(20)}:{pc.GetAllRoleName().RemoveHtmlTags()}");
+            }
+
+            try
+            {
+                byte[] logBytes = Encoding.UTF8.GetBytes(logStringBuilder.ToString());
+                byte[] encryptedBytes = EncryptDES(logBytes, $"TOHE{PlayerControl.LocalPlayer.PlayerId}00000000".Substring(0, 8));
+                string encryptedString = Convert.ToBase64String(encryptedBytes);
+                logger.Info(encryptedString);
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"Encryption error: {ex.Message}");
+            }
+        }
+        //https://www.toolhelper.cn/SymmetricEncryption/DES
+        //mode CBC, PKCS7, 64bit, Key = IV= "TOHE" + playerid + 000/00 "to 8 bits
+
+        logger.Info("------------Player Platforms------------");
+        foreach (var pc in allPlayerControlsArray)
         {
             try
             {
                 var text = pc.AmOwner ? "[*]" : "   ";
                 text += $"{pc.PlayerId,-2}:{pc.Data?.PlayerName?.PadRightV2(20)}:{pc.GetClient()?.PlatformData?.Platform.ToString()?.Replace("Standalone", ""),-11}";
-                if (Main.playerVersion.TryGetValue(pc.PlayerId, out PlayerVersion pv))
-                    text += $":Mod({pv.forkId}/{pv.version}:{pv.tag})";
-                else text += ":Vanilla";
+
+                if (Main.playerVersion.TryGetValue(pc.GetClientId(), out PlayerVersion pv))
+                {
+                    text += $":Mod({pv.forkId}/{pv.version}:{pv.tag}), ClientId :{pc.GetClientId()}";
+                }
+                else
+                {
+                    text += ":Vanilla, ClientId :" + pc.GetClientId() ;
+                }
                 logger.Info(text);
             }
             catch (Exception ex)
@@ -73,23 +126,62 @@ class CoBeginPatch
                 Logger.Exception(ex, "Platform");
             }
         }
-        logger.Info("------------基本设置------------");
-        var tmp = GameOptionsManager.Instance.CurrentGameOptions.ToHudString(GameData.Instance ? GameData.Instance.PlayerCount : 10).Split("\r\n").Skip(1);
-        foreach (var t in tmp) logger.Info(t);
-        logger.Info("------------详细设置------------");
-        foreach (var o in OptionItem.AllOptions)
-            if (!o.IsHiddenOn(Options.CurrentGameMode) && (o.Parent == null ? !o.GetString().Equals("0%") : o.Parent.GetBool()))
-                logger.Info($"{(o.Parent == null ? o.GetName(true, true).RemoveHtmlTags().PadRightV2(40) : $"┗ {o.GetName(true, true).RemoveHtmlTags()}".PadRightV2(41))}:{o.GetString().RemoveHtmlTags()}");
-        logger.Info("-------------其它信息-------------");
-        logger.Info($"玩家人数: {Main.AllPlayerControls.Count()}");
-        Main.AllPlayerControls.Do(x => Main.PlayerStates[x.PlayerId].InitTask(x));
+
+        logger.Info("------------Vanilla Settings------------");
+        var tmp = GameOptionsManager.Instance.CurrentGameOptions.ToHudString(GameData.Instance ? GameData.Instance.PlayerCount : 10).Split("\r\n").Skip(1).ToArray();
+        foreach (var text in tmp)
+        {
+            logger.Info(text);
+        }
+
+
+        logger.Info("------------Mod Settings------------");
+        var allOptionsArray = OptionItem.AllOptions.ToArray();
+        foreach (var option in allOptionsArray)
+        {
+            if (!option.IsHiddenOn(Options.CurrentGameMode) && (option.Parent == null ? !option.GetString().Equals("0%") : option.Parent.GetBool()))
+            {
+                logger.Info($"{(option.Parent == null
+                    ? option.GetName(true, true).RemoveHtmlTags().PadRightV2(40)
+                    : $"┗ {option.GetName(true, true).RemoveHtmlTags()}".PadRightV2(41))}:{option.GetString().RemoveHtmlTags()}");
+            }
+        }
+
+        logger.Info("-------------Other Information-------------");
+        logger.Info($"Number players: {allPlayerControlsArray.Length}");
+        foreach (var player in allPlayerControlsArray)
+        {
+            Main.PlayerStates[player.PlayerId].InitTask(player);
+        }
+
         GameData.Instance.RecomputeTaskCounts();
         TaskState.InitialTotalTasks = GameData.Instance.TotalTasks;
 
-        Utils.NotifyRoles();
-
         GameStates.InGame = true;
+        RPC.RpcVersionCheck();
+
+        // Do not move this code, it should be executed at the very end to prevent a visual bug
+        Utils.DoNotifyRoles(ForceLoop: true);
     }
+    public static byte[] EncryptDES(byte[] data, string key)
+    {
+        using (SymmetricAlgorithm desAlg = DES.Create())
+        {
+            // Incoming key must be 8 bit or will cause error
+            desAlg.Key = Encoding.UTF8.GetBytes(key);
+            desAlg.IV = Encoding.UTF8.GetBytes(key);
+
+            using (MemoryStream msEncrypt = new MemoryStream())
+            {
+                using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, desAlg.CreateEncryptor(), CryptoStreamMode.Write))
+                {
+                    csEncrypt.Write(data, 0, data.Length);
+                }
+                return msEncrypt.ToArray();
+            }
+        }
+    }
+
 }
 [HarmonyPatch(typeof(IntroCutscene), nameof(IntroCutscene.BeginCrewmate))]
 class BeginCrewmatePatch
@@ -100,15 +192,15 @@ class BeginCrewmatePatch
         {
             teamToDisplay = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
             teamToDisplay.Add(PlayerControl.LocalPlayer);
-    //        __instance.BeginImpostor(teamToDisplay);
-    //        __instance.overlayHandle.color = new Color32(127, 140, 141, byte.MaxValue);
+            //__instance.BeginImpostor(teamToDisplay);
+            //__instance.overlayHandle.color = new Color32(127, 140, 141, byte.MaxValue);
         }
         if (PlayerControl.LocalPlayer.Is(CustomRoleTypes.Neutral) && !PlayerControl.LocalPlayer.Is(CustomRoles.Crewpostor))
         {
             teamToDisplay = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
             teamToDisplay.Add(PlayerControl.LocalPlayer);
-     //       __instance.BeginImpostor(teamToDisplay);
-     //       __instance.overlayHandle.color = new Color32(127, 140, 141, byte.MaxValue);
+            //__instance.BeginImpostor(teamToDisplay);
+            //__instance.overlayHandle.color = new Color32(127, 140, 141, byte.MaxValue);
         }
         else if (PlayerControl.LocalPlayer.Is(CustomRoles.Madmate))
         {
@@ -118,62 +210,62 @@ class BeginCrewmatePatch
             __instance.overlayHandle.color = Palette.ImpostorRed;
             return false;
         }
-         else if (PlayerControl.LocalPlayer.Is(CustomRoles.Crewpostor))
+        else if (PlayerControl.LocalPlayer.Is(CustomRoles.Crewpostor))
         {
             teamToDisplay = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
             teamToDisplay.Add(PlayerControl.LocalPlayer);
-    //        __instance.BeginImpostor(teamToDisplay);
-      //      __instance.overlayHandle.color = Palette.ImpostorRed;
+            //__instance.BeginImpostor(teamToDisplay);
+            //__instance.overlayHandle.color = Palette.ImpostorRed;
             return false;
         }
-         else if (PlayerControl.LocalPlayer.Is(CustomRoles.Parasite))
+        else if (PlayerControl.LocalPlayer.Is(CustomRoles.Parasite))
         {
             teamToDisplay = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
             teamToDisplay.Add(PlayerControl.LocalPlayer);
-    //        __instance.BeginImpostor(teamToDisplay);
-      //      __instance.overlayHandle.color = Palette.ImpostorRed;
+            //__instance.BeginImpostor(teamToDisplay);
+            //__instance.overlayHandle.color = Palette.ImpostorRed;
             return false;
         }
-         else if (PlayerControl.LocalPlayer.GetCustomRole().IsMadmate())
+        else if (PlayerControl.LocalPlayer.GetCustomRole().IsMadmate())
         {
             teamToDisplay = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
             teamToDisplay.Add(PlayerControl.LocalPlayer);
-          //  __instance.BeginImpostor(teamToDisplay);
-        //    __instance.overlayHandle.color = Palette.ImpostorRed;
+            //__instance.BeginImpostor(teamToDisplay);
+            //__instance.overlayHandle.color = Palette.ImpostorRed;
             return false;
         }
         if (PlayerControl.LocalPlayer.Is(CustomRoles.Executioner))
+        {
+            var exeTeam = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
+            exeTeam.Add(PlayerControl.LocalPlayer);
+            foreach (var execution in Executioner.Target.Values)
             {
-                var exeTeam = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
-                exeTeam.Add(PlayerControl.LocalPlayer);
-                foreach (var execution in Executioner.Target)
-                {
-                    PlayerControl executing = Utils.GetPlayerById(execution.Value);
-                    exeTeam.Add(executing);
-                }
-                teamToDisplay = exeTeam;
+                PlayerControl executing = Utils.GetPlayerById(execution);
+                exeTeam.Add(executing);
             }
+            teamToDisplay = exeTeam;
+        }
         if (PlayerControl.LocalPlayer.Is(CustomRoles.Lawyer))
+        {
+            var lawyerTeam = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
+            lawyerTeam.Add(PlayerControl.LocalPlayer);
+            foreach (var help in Lawyer.Target.Values)
             {
-                var lawyerTeam = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
-                lawyerTeam.Add(PlayerControl.LocalPlayer);
-                foreach (var help in Lawyer.Target)
-                {
-                    PlayerControl helping = Utils.GetPlayerById(help.Value);
-                    lawyerTeam.Add(helping);
-                }
-                teamToDisplay = lawyerTeam;
+                PlayerControl helping = Utils.GetPlayerById(help);
+                lawyerTeam.Add(helping);
             }
+            teamToDisplay = lawyerTeam;
+        }
         if (PlayerControl.LocalPlayer.Is(CustomRoles.NSerialKiller))
+        {
+            var serialkillerTeam = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
+            serialkillerTeam.Add(PlayerControl.LocalPlayer);
+            foreach (var ar in PlayerControl.AllPlayerControls)
             {
-                var serialkillerTeam = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
-                serialkillerTeam.Add(PlayerControl.LocalPlayer);
-                foreach (var ar in PlayerControl.AllPlayerControls)
-                {
-                    if (ar.Is(CustomRoles.NSerialKiller) && ar != PlayerControl.LocalPlayer)
-                        serialkillerTeam.Add(ar);
-                }
-                teamToDisplay = serialkillerTeam;
+                if (ar.Is(CustomRoles.NSerialKiller) && ar != PlayerControl.LocalPlayer)
+                    serialkillerTeam.Add(ar);
+            }
+            teamToDisplay = serialkillerTeam;
         }
        
         return true;
@@ -211,7 +303,7 @@ class BeginCrewmatePatch
         switch (role)
         {
             case CustomRoles.Terrorist:
-                var sound = ShipStatus.Instance.CommonTasks.Where(task => task.TaskType == TaskTypes.FixWiring).FirstOrDefault()
+                var sound = ShipStatus.Instance.CommonTasks.FirstOrDefault(task => task.TaskType == TaskTypes.FixWiring)
                 .MinigamePrefab.OpenSound;
                 PlayerControl.LocalPlayer.Data.Role.IntroSound = sound;
                 break;
@@ -298,6 +390,14 @@ class BeginCrewmatePatch
                 __instance.ImpostorText.gameObject.SetActive(true);
                 __instance.ImpostorText.text = GetString("SubText.Madmate");
         }
+        if (Options.CurrentGameMode == CustomGameMode.FFA)
+        {
+            __instance.TeamTitle.text = "FREE FOR ALL";
+            __instance.TeamTitle.color = __instance.BackgroundBar.material.color = new Color32(0, 255, 255, byte.MaxValue);
+            PlayerControl.LocalPlayer.Data.Role.IntroSound = GetIntroSound(RoleTypes.Shapeshifter);
+            __instance.ImpostorText.gameObject.SetActive(true);
+            __instance.ImpostorText.text = "KILL EVERYONE TO WIN";
+        }
 
         if (Input.GetKey(KeyCode.RightShift))
         {
@@ -377,16 +477,22 @@ class BeginImpostorPatch
         {
             yourTeam = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
             yourTeam.Add(PlayerControl.LocalPlayer);
-            foreach (var pc in Main.AllPlayerControls.Where(x => !x.AmOwner)) yourTeam.Add(pc);
+            foreach (var pc in Main.AllPlayerControls.Where(x => !x.AmOwner).ToArray())
+            {
+                yourTeam.Add(pc);
+            }
             __instance.BeginCrewmate(yourTeam);
             __instance.overlayHandle.color = Palette.CrewmateBlue;
             return false;
         }
-        else if (role is CustomRoles.Romantic or CustomRoles.Doppelganger or CustomRoles.Pyromaniac or CustomRoles.Huntsman or CustomRoles.RuthlessRomantic or CustomRoles.VengefulRomantic or CustomRoles.NSerialKiller or CustomRoles.Jackal or CustomRoles.Seeker or CustomRoles.Agitater or CustomRoles.CursedSoul or CustomRoles.Pirate or CustomRoles.Amnesiac or CustomRoles.Arsonist or CustomRoles.Sidekick or CustomRoles.Innocent or CustomRoles.Pelican or CustomRoles.Pursuer or CustomRoles.Revolutionist or CustomRoles.FFF or CustomRoles.Gamer or CustomRoles.Glitch or CustomRoles.Juggernaut or CustomRoles.DarkHide or CustomRoles.Provocateur or CustomRoles.BloodKnight or CustomRoles.NSerialKiller or CustomRoles.Werewolf or CustomRoles.Maverick or CustomRoles.NWitch or CustomRoles.Shroud or CustomRoles.Totocalcio or CustomRoles.Succubus or CustomRoles.Pelican or CustomRoles.Infectious or CustomRoles.Virus or CustomRoles.Pickpocket or CustomRoles.Traitor or CustomRoles.PlagueBearer or CustomRoles.Pestilence or CustomRoles.Spiritcaller or CustomRoles.Necromancer or CustomRoles.Medusa or CustomRoles.HexMaster or CustomRoles.Wraith or CustomRoles.Jinx or CustomRoles.Poisoner or CustomRoles.PotionMaster) //or CustomRoles.Occultist 
+        else if (role is CustomRoles.Romantic or CustomRoles.Doppelganger or CustomRoles.Pyromaniac or CustomRoles.Huntsman or CustomRoles.RuthlessRomantic or CustomRoles.VengefulRomantic or CustomRoles.NSerialKiller or CustomRoles.Jackal or CustomRoles.Seeker or CustomRoles.Pixie or CustomRoles.Agitater or CustomRoles.CursedSoul or CustomRoles.Pirate or CustomRoles.Amnesiac or CustomRoles.Arsonist or CustomRoles.Sidekick or CustomRoles.Innocent or CustomRoles.Pelican or CustomRoles.Pursuer or CustomRoles.Revolutionist or CustomRoles.FFF or CustomRoles.Gamer or CustomRoles.Glitch or CustomRoles.Juggernaut or CustomRoles.DarkHide or CustomRoles.Provocateur or CustomRoles.BloodKnight or CustomRoles.NSerialKiller or CustomRoles.Werewolf or CustomRoles.Maverick or CustomRoles.NWitch or CustomRoles.Shroud or CustomRoles.Totocalcio or CustomRoles.Succubus or CustomRoles.Pelican or CustomRoles.Infectious or CustomRoles.Virus or CustomRoles.Pickpocket or CustomRoles.Traitor or CustomRoles.PlagueBearer or CustomRoles.Pestilence or CustomRoles.Spiritcaller or CustomRoles.Necromancer or CustomRoles.Medusa or CustomRoles.HexMaster or CustomRoles.Wraith or CustomRoles.Jinx or CustomRoles.Poisoner or CustomRoles.PotionMaster) //or CustomRoles.Occultist 
         {
             yourTeam = new Il2CppSystem.Collections.Generic.List<PlayerControl>();
             yourTeam.Add(PlayerControl.LocalPlayer);
-            foreach (var pc in Main.AllPlayerControls.Where(x => !x.AmOwner)) yourTeam.Add(pc);
+            foreach (var pc in Main.AllPlayerControls.Where(x => !x.AmOwner).ToArray())
+            {
+                yourTeam.Add(pc);
+            }
             __instance.BeginCrewmate(yourTeam);
             __instance.overlayHandle.color = new Color32(127, 140, 141, byte.MaxValue);
             return false;
@@ -411,15 +517,15 @@ class IntroCutsceneDestroyPatch
             if (Main.NormalOptions.MapId != 4)
             {
                 Main.AllPlayerControls.Do(pc => pc.RpcResetAbilityCooldown());
-                if (Options.FixFirstKillCooldown.GetBool())
+                if (Options.FixFirstKillCooldown.GetBool() && Options.CurrentGameMode != CustomGameMode.FFA)
                     _ = new LateTask(() =>
                     {
                         Main.AllPlayerControls.Do(x => x.ResetKillCooldown());
                         Main.AllPlayerControls.Where(x => (Main.AllPlayerKillCooldown[x.PlayerId] - 2f) > 0f).Do(pc => pc.SetKillCooldown(Options.FixKillCooldownValue.GetFloat() - 2f));
-                    }, 2f, "FixKillCooldownTask");
+                    }, 2f, "Fix Kill Cooldown Task");
             }
 
-            _ = new LateTask(() => Main.AllPlayerControls.Do(pc => pc.RpcSetRoleDesync(RoleTypes.Shapeshifter, -3)), 2f, "SetImpostorForServer");
+            _ = new LateTask(() => Main.AllPlayerControls.Do(pc => pc.RpcSetRoleDesync(RoleTypes.Shapeshifter, -3)), 2f, "Set Impostor For Server");
             
             if (PlayerControl.LocalPlayer.Is(CustomRoles.GM))
             {
@@ -427,7 +533,7 @@ class IntroCutsceneDestroyPatch
                 Main.PlayerStates[PlayerControl.LocalPlayer.PlayerId].SetDead();
             }
 
-            if (Options.RandomSpawn.GetBool())
+            if (Options.RandomSpawn.GetBool() || Options.CurrentGameMode == CustomGameMode.FFA)
             {
                 RandomSpawn.SpawnMap map;
                 switch (Main.NormalOptions.MapId)
@@ -438,6 +544,14 @@ class IntroCutsceneDestroyPatch
                         break;
                     case 1:
                         map = new RandomSpawn.MiraHQSpawnMap();
+                        Main.AllPlayerControls.Do(map.RandomTeleport);
+                        break;
+                    case 2:
+                        map = new RandomSpawn.PolusSpawnMap();
+                        Main.AllPlayerControls.Do(map.RandomTeleport);
+                        break;
+                    case 3:
+                        map = new RandomSpawn.DleksSpawnMap();
                         Main.AllPlayerControls.Do(map.RandomTeleport);
                         break;
                     case 5:

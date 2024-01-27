@@ -1,18 +1,18 @@
 ﻿using HarmonyLib;
 using Hazel;
-using TMPro;
 using System;
-using UnityEngine;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
+using TMPro;
 using TOHE.Modules;
-using TOHE.Roles.Crewmate;
-using TOHE.Roles.Neutral;
-using TOHE.Roles.AddOns.Common;
-using static TOHE.Translator;
-using TOHE.Roles.Double;
 using TOHE.Modules.ChatManager;
+using TOHE.Roles.AddOns.Common;
+using TOHE.Roles.Crewmate;
+using TOHE.Roles.Double;
+using TOHE.Roles.Neutral;
+using UnityEngine;
+using static TOHE.Translator;
 
 namespace TOHE;
 
@@ -33,17 +33,17 @@ public static class GuessManager
     public static bool CheckCommond(ref string msg, string command, bool exact = true)
     {
         var comList = command.Split('|');
-        for (int i = 0; i < comList.Count(); i++)
+        foreach(string comm in comList)
         {
             if (exact)
             {
-                if (msg == "/" + comList[i]) return true;
+                if (msg == "/" + comm) return true;
             }
             else
             {
-                if (msg.StartsWith("/" + comList[i]))
+                if (msg.StartsWith("/" + comm))
                 {
-                    msg = msg.Replace("/" + comList[i], string.Empty);
+                    msg = msg.Replace("/" + comm, string.Empty);
                     return true;
                 }
             }
@@ -77,9 +77,9 @@ public static class GuessManager
     private static bool ComfirmIncludeMsg(string msg, string key)
     {
         var keys = key.Split('|');
-        for (int i = 0; i < keys.Count(); i++)
+        foreach (string str in keys)
         {
-            if (msg.Contains(keys[i])) return true;
+            if (msg.Contains(str)) return true;
         }
         return false;
     }
@@ -89,13 +89,13 @@ public static class GuessManager
         var originMsg = msg;
 
         if (!AmongUsClient.Instance.AmHost) return false;
-        if (!GameStates.IsInGame || pc == null) return false;
-        if (!pc.Is(CustomRoles.NiceGuesser)
-            && !pc.Is(CustomRoles.EvilGuesser)
-            && !pc.Is(CustomRoles.Doomsayer)
-            && !pc.Is(CustomRoles.Judge)
-            && !pc.Is(CustomRoles.Councillor)
-            && !pc.Is(CustomRoles.Guesser)
+        if (!GameStates.IsMeeting || pc == null || GameStates.IsExilling) return false;
+        if (!pc.Is(CustomRoles.NiceGuesser) 
+            && !pc.Is(CustomRoles.EvilGuesser) 
+            && !pc.Is(CustomRoles.Doomsayer) 
+            && !pc.Is(CustomRoles.Judge) 
+            && !pc.Is(CustomRoles.Councillor) 
+            && !pc.Is(CustomRoles.Guesser) 
             && !Options.GuesserMode.GetBool()) return false;
 
         int operate = 0; // 1:ID 2:猜测
@@ -160,7 +160,7 @@ public static class GuessManager
             (pc.Is(CustomRoles.Doomsayer) && Doomsayer.DoomsayerTryHideMsg.GetBool()) ||
             (pc.Is(CustomRoles.Guesser) && Options.GTryHideMsg.GetBool()) ||
             (Options.GuesserMode.GetBool() && Options.HideGuesserCommands.GetBool())
-            )
+            ) 
             {
                 //if (Options.NewHideMsg.GetBool()) ChatManager.SendPreviousMessagesToAll();
                 //else TryHideMsg(); 
@@ -183,11 +183,19 @@ public static class GuessManager
 
             if (target != null)
             {
+                GuessMaster.OnGuess(role);
                 bool guesserSuicide = false;
                 if (CopyCat.playerIdList.Contains(pc.PlayerId))
                 {
                     if (!isUI) Utils.SendMessage(GetString("GuessDisabled"), pc.PlayerId);
                     else pc.ShowPopUp(GetString("GuessDisabled"));
+                    return true;
+                }
+
+                if (!Mundane.OnGuess(pc))
+                {
+                    if (!isUI) Utils.SendMessage(GetString("GuessedAsMundane"), pc.PlayerId);
+                    else pc.ShowPopUp(GetString("GuessedAsMundane"));
                     return true;
                 }
 
@@ -202,6 +210,12 @@ public static class GuessManager
                 {
                     if (!isUI) Utils.SendMessage(GetString("EGGuessMax"), pc.PlayerId);
                     else pc.ShowPopUp(GetString("EGGuessMax"));
+                    return true;
+                }
+                if (pc.Is(CustomRoles.Solsticer) && (!Solsticer.CanGuess || !Solsticer.SolsticerCanGuess.GetBool()))
+                {
+                    if (!isUI) Utils.SendMessage(GetString("SolsticerGuessMax"), pc.PlayerId);
+                    else pc.ShowPopUp(GetString("SolsticerGuessMax"));
                     return true;
                 }
                 if (pc.Is(CustomRoles.Phantom) && !Options.PhantomCanGuess.GetBool())
@@ -255,7 +269,7 @@ public static class GuessManager
                         return true;
                     }
                 }
-                if (pc.Is(CustomRoles.NiceMini) && Mini.Age < 18)
+                if (target.Is(CustomRoles.NiceMini) && Mini.Age < 18)
                 {
                     if (!isUI) Utils.SendMessage(GetString("GuessMini"), pc.PlayerId);
                     else pc.ShowPopUp(GetString("GuessMini"));
@@ -279,13 +293,19 @@ public static class GuessManager
                     else pc.ShowPopUp(GetString("GuessDisabled"));
                     return true;
                 }
+                if (pc.Is(CustomRoles.Solsticer) && !Solsticer.SolsticerCanGuess.GetBool())
+                {
+                    if (!isUI) Utils.SendMessage(GetString("GuessDisabled"), pc.PlayerId);
+                    else pc.ShowPopUp(GetString("GuessDisabled"));
+                    return true;
+                }
                 if (role == CustomRoles.SuperStar || target.Is(CustomRoles.SuperStar))
                 {
                     if (!isUI) Utils.SendMessage(GetString("GuessSuperStar"), pc.PlayerId);
                     else pc.ShowPopUp(GetString("GuessSuperStar"));
                     return true;
                 }
-                if (role == CustomRoles.President || target.Is(CustomRoles.President) && President.CheckPresidentReveal[target.PlayerId] == true && !President.PresidentCanBeGuessedAfterRevealing.GetBool())
+                if ((role == CustomRoles.President || target.Is(CustomRoles.President)) && President.CheckPresidentReveal[target.PlayerId] == true && !President.PresidentCanBeGuessedAfterRevealing.GetBool())
                 {
                     Utils.SendMessage(GetString("GuessPresident"), pc.PlayerId);
                     return true;
@@ -296,10 +316,16 @@ public static class GuessManager
                     else pc.ShowPopUp(GetString("GuessNotifiedBait"));
                     return true;
                 }
-                if (role == CustomRoles.LastImpostor || role == CustomRoles.Mare || role == CustomRoles.Cyber)//(role == CustomRoles.Glow || role == CustomRoles.LastImpostor || role == CustomRoles.Mare || role == CustomRoles.Cyber)
+                if (role == CustomRoles.LastImpostor || role == CustomRoles.Mare || role == CustomRoles.Cyber || role == CustomRoles.Flash)//(role == CustomRoles.Glow || role == CustomRoles.LastImpostor || role == CustomRoles.Mare || role == CustomRoles.Cyber)
                 {
                     if (!isUI) Utils.SendMessage(GetString("GuessObviousAddon"), pc.PlayerId);
                     else pc.ShowPopUp(GetString("GuessObviousAddon"));
+                    return true;
+                }
+                if (role == CustomRoles.Solsticer && target.Is(CustomRoles.Solsticer))
+                {
+                    if (!isUI) Utils.SendMessage(GetString("GuessSolsticer"), pc.PlayerId);
+                    else pc.ShowPopUp(GetString("GuessSolsticer"));
                     return true;
                 }
                 if (target.Is(CustomRoles.Onbound))
@@ -341,8 +367,11 @@ public static class GuessManager
 
                     if (Main.MasochistKillMax[target.PlayerId] >= Options.MasochistKillMax.GetInt())
                     {
-                        CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Masochist);
-                        CustomWinnerHolder.WinnerIds.Add(target.PlayerId);
+                        if (!CustomWinnerHolder.CheckForConvertedWinner(target.PlayerId))
+                        {
+                            CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Masochist);
+                            CustomWinnerHolder.WinnerIds.Add(target.PlayerId);
+                        }
                     }
                     return true;
                 }
@@ -634,7 +663,7 @@ public static class GuessManager
 
                             _ = new LateTask(() =>
                             {
-                                Utils.SendMessage(string.Format(GetString("DoomsayerGuessCountMsg"), Doomsayer.GuessesCount), pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Doomsayer), GetString("DoomsayerGuessCountTitle")));
+                                Utils.SendMessage(string.Format(GetString("DoomsayerGuessCountMsg"), Doomsayer.GuessingToWin[pc.PlayerId]), pc.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Doomsayer), GetString("DoomsayerGuessCountTitle")));
                             }, 0.7f, "Doomsayer Guess Msg 1");
                         }
 
@@ -654,6 +683,13 @@ public static class GuessManager
 
                         return true;
                     }
+                }
+
+                if (dp.Is(CustomRoles.Solsticer))
+                {
+                    Solsticer.CanGuess = false;
+                    _ = new LateTask(() => { Utils.SendMessage(GetString("SolsticerMisGuessed"), dp.PlayerId, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Solsticer), GetString("GuessKillTitle")), true); }, 0.6f, "Solsticer MisGuess Msg");
+                    return true;
                 }
 
                 string Name = dp.GetRealName();
@@ -681,12 +717,13 @@ public static class GuessManager
                             Doomsayer.CheckCountGuess(pc);
                         }
 
+                        if (dp == pc) GuessMaster.OnGuess(role, isMisguess: true, dp: dp);
                         //死者检查
                         Utils.AfterPlayerDeathTasks(dp, true);
 
                         Utils.NotifyRoles(isForMeeting: GameStates.IsMeeting, NoCache: true);
 
-                        _ = new LateTask(() => { Utils.SendMessage(string.Format(GetString("GuessKill"), Name), 255, Utils.ColorString(Utils.GetRoleColor(CustomRoles.NiceGuesser), GetString("GuessKillTitle"))); }, 0.6f, "Guess Msg");
+                        _ = new LateTask(() => { Utils.SendMessage(string.Format(GetString("GuessKill"), Name), 255, Utils.ColorString(Utils.GetRoleColor(CustomRoles.NiceGuesser), GetString("GuessKillTitle")), true); }, 0.6f, "Guess Msg");
 
                         if (pc.Is(CustomRoles.Doomsayer) && pc.PlayerId != dp.PlayerId)
                         {
@@ -735,13 +772,14 @@ public static class GuessManager
         voteArea.Overlay.color = Color.white;
         voteArea.XMark.gameObject.SetActive(true);
         voteArea.XMark.transform.localScale = Vector3.one;
-        foreach (var playerVoteArea in meetingHud.playerStates)
+        foreach (var playerVoteArea in meetingHud.playerStates.ToArray())
         {
             if (playerVoteArea.VotedFor != pc.PlayerId) continue;
             playerVoteArea.UnsetVote();
             var voteAreaPlayer = Utils.GetPlayerById(playerVoteArea.TargetPlayerId);
             if (!voteAreaPlayer.AmOwner) continue;
             meetingHud.ClearVote();
+            meetingHud.CheckForEndVoting();
         }
         MessageWriter writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.GuessKill, SendOption.Reliable, -1);
         writer.Write(pc.PlayerId);
@@ -774,7 +812,7 @@ public static class GuessManager
         voteArea.Overlay.color = Color.white;
         voteArea.XMark.gameObject.SetActive(true);
         voteArea.XMark.transform.localScale = Vector3.one;
-        foreach (var playerVoteArea in meetingHud.playerStates)
+        foreach (var playerVoteArea in meetingHud.playerStates.ToArray())
         {
             if (playerVoteArea.VotedFor != pc.PlayerId) continue;
             playerVoteArea.UnsetVote();
@@ -832,7 +870,7 @@ public static class GuessManager
     public static void TryHideMsg()
     {
         ChatUpdatePatch.DoBlockChat = true;
-        List<CustomRoles> roles = CustomRolesHelper.AllRoles.Where(x => x is not CustomRoles.NotAssigned).ToList();
+        var roles = CustomRolesHelper.AllRoles.Where(x => x is not CustomRoles.NotAssigned).ToArray();
         var rd = IRandom.Instance;
         string msg;
         string[] command = new string[] { "bet", "bt", "guess", "gs", "shoot", "st", "赌", "猜", "审判", "tl", "判", "审" };
@@ -849,11 +887,11 @@ public static class GuessManager
                 msg += rd.Next(1, 100) < 50 ? string.Empty : " ";
                 msg += rd.Next(0, 15).ToString();
                 msg += rd.Next(1, 100) < 50 ? string.Empty : " ";
-                CustomRoles role = roles[rd.Next(0, roles.Count)];
+                CustomRoles role = roles[rd.Next(0, roles.Length)];
                 msg += rd.Next(1, 100) < 50 ? string.Empty : " ";
                 msg += Utils.GetRoleName(role);
             }
-            var player = Main.AllAlivePlayerControls.ToArray()[rd.Next(0, Main.AllAlivePlayerControls.Count())];
+            var player = Main.AllAlivePlayerControls[rd.Next(0, Main.AllAlivePlayerControls.Length)];
             DestroyableSingleton<HudManager>.Instance.Chat.AddChat(player, msg);
             var writer = CustomRpcSender.Create("MessagesToSend", SendOption.None);
             writer.StartMessage(-1);
@@ -896,8 +934,8 @@ public static class GuessManager
                 if (PlayerControl.LocalPlayer.IsAlive() && PlayerControl.LocalPlayer.Is(CustomRoles.EvilGuesser))
                     CreateGuesserButton(__instance);
 
-                /*    if (PlayerControl.LocalPlayer.IsAlive() && PlayerControl.LocalPlayer.Is(CustomRoles.Ritualist))
-                        CreateGuesserButton(__instance); */
+            /*    if (PlayerControl.LocalPlayer.IsAlive() && PlayerControl.LocalPlayer.Is(CustomRoles.Ritualist))
+                    CreateGuesserButton(__instance); */
 
                 if (PlayerControl.LocalPlayer.IsAlive() && PlayerControl.LocalPlayer.Is(CustomRoles.NiceGuesser))
                     CreateGuesserButton(__instance);
@@ -913,7 +951,7 @@ public static class GuessManager
     public static void CreateGuesserButton(MeetingHud __instance)
     {
 
-        foreach (var pva in __instance.playerStates)
+        foreach (var pva in __instance.playerStates.ToArray())
         {
             var pc = Utils.GetPlayerById(pva.TargetPlayerId);
             if (pc == null || !pc.IsAlive()) continue;
@@ -944,7 +982,7 @@ public static class GuessManager
         foreach (var RoleButton in RoleButtons)
         {
             int index = 0;
-            foreach (var RoleBtn in RoleButton.Value)
+            foreach (var RoleBtn in RoleButton.Value.ToArray())
             {
                 if (RoleBtn == null) continue;
                 index++;
@@ -1149,7 +1187,7 @@ public static class GuessManager
                     or CustomRoles.Scientist
                     or CustomRoles.Impostor
                     or CustomRoles.Shapeshifter
-                    or CustomRoles.Flashman
+                    or CustomRoles.Flash
                     or CustomRoles.NotAssigned
                     //     or CustomRoles.Marshall 
                     //or CustomRoles.Paranoia 
@@ -1158,6 +1196,15 @@ public static class GuessManager
                     or CustomRoles.Oblivious
                     //     or CustomRoles.Reflective
                     or CustomRoles.GuardianAngelTOHE
+                    or CustomRoles.Solsticer
+                    or CustomRoles.GuardianAngel
+                    or CustomRoles.Killer
+                    or CustomRoles.Mini
+                    or CustomRoles.Onbound
+                    or CustomRoles.Rebound
+                    or CustomRoles.LastImpostor
+                    or CustomRoles.Mare
+                    or CustomRoles.Cyber
                     ) continue;
 
                 CreateRole(role);

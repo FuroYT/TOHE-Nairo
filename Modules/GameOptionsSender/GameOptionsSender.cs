@@ -1,11 +1,9 @@
-using System;
 using System.Collections.Generic;
 using AmongUs.GameOptions;
 using Hazel;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
+using Il2CppSystem;
 using InnerNet;
-using Array = Il2CppSystem.Array;
-using Buffer = Il2CppSystem.Buffer;
 
 namespace TOHE.Modules;
 
@@ -17,7 +15,8 @@ public abstract class GameOptionsSender
     public static void SendAllGameOptions()
     {
         AllSenders.RemoveAll(s => !s.AmValid()); // .AmValid() has a virtual property, so it doesn't always return true
-        foreach (var sender in AllSenders)
+        var array = AllSenders.ToArray();
+        foreach (GameOptionsSender sender in array)
         {
             if (sender.IsDirty) sender.SendGameOptions();
             sender.IsDirty = false;
@@ -59,12 +58,19 @@ public abstract class GameOptionsSender
     }
     public virtual void SendOptionsArray(Il2CppStructArray<byte> optionArray)
     {
-        for (byte i = 0; i < GameManager.Instance.LogicComponents.Count; i++)
+        try
         {
-            if (GameManager.Instance.LogicComponents[(Index)i].TryCast<LogicOptions>(out _))
+            for (byte i = 0; i < GameManager.Instance.LogicComponents.Count; i++)
             {
-                SendOptionsArray(optionArray, i, -1);
+                if (GameManager.Instance.LogicComponents[i].TryCast<LogicOptions>(out _))
+                {
+                    SendOptionsArray(optionArray, i, -1);
+                }
             }
+        }
+        catch (System.Exception error)
+        {
+            Logger.Fatal(error.ToString(), "GameOptionsSender.SendOptionsArray");
         }
     }
     protected virtual void SendOptionsArray(Il2CppStructArray<byte> optionArray, byte LogicOptionsIndex, int targetClientId)

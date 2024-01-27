@@ -1,12 +1,12 @@
 ﻿using Hazel;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using static TOHE.Translator;
 
 namespace TOHE.Roles.Neutral;
 public static class Seeker
 {
-    private static readonly int Id = 34000;
+    private static readonly int Id = 14600;
     private static List<byte> playerIdList = new();
     public static bool IsEnable = false;
 
@@ -48,7 +48,7 @@ public static class Seeker
             _ = new LateTask(() =>
             {
                 ResetTarget(Utils.GetPlayerById(playerId));
-            }, 10f, "SeekerRound1");
+            }, 10f, "Seeker Round 1");
 
         if (!AmongUsClient.Instance.AmHost) return;
         if (!Main.ResetCamPlayerList.Contains(playerId))
@@ -115,9 +115,11 @@ public static class Seeker
 
     public static void OnFixedUpdate(PlayerControl player)
     {
+        if (player == null) return;
         var targetId = GetTarget(player);
+        var seekerId = player.PlayerId;
         var playerState = Main.PlayerStates[targetId];
-        var totalPoints = TotalPoints[targetId];
+        var totalPoints = TotalPoints[seekerId];
 
         if (playerState.IsDead)
         {
@@ -126,9 +128,12 @@ public static class Seeker
         
         if (totalPoints >= PointsToWinOpt)
         {
-            TotalPoints[targetId] = PointsToWinOpt;
-            CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Seeker);
-            CustomWinnerHolder.WinnerIds.Add(targetId);
+            TotalPoints[seekerId] = PointsToWinOpt;
+            if (!CustomWinnerHolder.CheckForConvertedWinner(seekerId))
+            {
+                CustomWinnerHolder.ResetAndSetWinner(CustomWinner.Seeker);
+                CustomWinnerHolder.WinnerIds.Add(seekerId);
+            }
         }
     }
     public static byte GetTarget(PlayerControl player)
@@ -150,7 +155,7 @@ public static class Seeker
             Main.AllPlayerSpeed[player.PlayerId] = DefaultSpeed;
             ReportDeadBodyPatch.CanReport[player.PlayerId] = true;
             player.MarkDirtySettings(); // dont know what the hell is this
-        }, 5f, "FreezeSeeker");
+        }, 5f, "Freeze Seeker");
     }
     public static byte ResetTarget(PlayerControl player)
     {
@@ -160,7 +165,7 @@ public static class Seeker
 
         var cTargets = new List<PlayerControl>(Main.AllAlivePlayerControls.Where(pc => !pc.Is(CustomRoles.Seeker)));
 
-        if (cTargets.Count() >= 2 && Targets.TryGetValue(player.PlayerId, out var nowTarget))
+        if (cTargets.Count >= 2 && Targets.TryGetValue(player.PlayerId, out var nowTarget))
             cTargets.RemoveAll(x => x.PlayerId == nowTarget);
 
         if (cTargets.Count <= 0)

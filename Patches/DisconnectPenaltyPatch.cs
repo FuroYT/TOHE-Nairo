@@ -6,6 +6,10 @@ namespace TOHE.Patches
     public static class DisconnectPenaltyPatch {
         public static bool Prefix(StatsManager __instance, ref int __result)
         {
+            if (!DebugModeManager.AmDebugger)
+            {
+                return true;
+            }
             if (__instance.BanPoints != 0f)
             {
                 __instance.BanPoints = 0f;

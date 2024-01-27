@@ -2,7 +2,7 @@ namespace TOHE.Roles.AddOns.Impostor;
 
 public static class LastImpostor
 {
-    private static readonly int Id = 15900;
+    private static readonly int Id = 22800;
     public static byte currentId = byte.MaxValue;
     public static OptionItem CooldownReduction;
     public static void SetupCustomOption()
@@ -26,7 +26,7 @@ public static class LastImpostor
     {
         //ラストインポスターがすでにいれば処理不要
         if (currentId != byte.MaxValue || !AmongUsClient.Instance.AmHost) return;
-        if (!CustomRoles.LastImpostor.IsEnable() || Main.AliveImpostorCount != 1) return;
+        if (Options.CurrentGameMode == CustomGameMode.FFA || !CustomRoles.LastImpostor.IsEnable() || Main.AliveImpostorCount != 1) return;
 
         foreach (var pc in Main.AllAlivePlayerControls)
         {
@@ -36,7 +36,7 @@ public static class LastImpostor
                 Add(pc.PlayerId);
                 SetKillCooldown();
                 pc.SyncSettings();
-                Utils.NotifyRoles();
+                Utils.NotifyRoles(SpecifySeer: pc);
                 break;
             }
         }

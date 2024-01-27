@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using TOHE.Modules;
-using TOHE.Roles.Neutral;
 using static TOHE.Options;
 using static TOHE.Translator;
 using static TOHE.Utils;
@@ -10,7 +9,7 @@ namespace TOHE.Roles.Impostor
 {
     public static class Twister
     {
-        private static readonly int Id = 4400;
+        private static readonly int Id = 5700;
 
         private static OptionItem ShapeshiftCooldown;
         private static OptionItem ShapeshiftDuration;
@@ -44,7 +43,7 @@ namespace TOHE.Roles.Impostor
 
                 var filtered = Main.AllAlivePlayerControls.Where(a =>
                     pc.CanBeTeleported() && a.PlayerId != pc.PlayerId && !changePositionPlayers.Contains(a.PlayerId)).ToList();
-
+                
                 if (filtered.Count == 0) break;
 
                 var target = filtered[rd.Next(0, filtered.Count)];
@@ -53,8 +52,8 @@ namespace TOHE.Roles.Impostor
 
                 pc.RPCPlayCustomSound("Teleport");
 
-                var originPs = target.GetTruePosition();
-                target.RpcTeleport(pc.GetTruePosition());
+                var originPs = target.GetCustomPosition();
+                target.RpcTeleport(pc.GetCustomPosition());
                 pc.RpcTeleport(originPs);
 
                 if (!HideTwistedPlayerNames.GetBool())

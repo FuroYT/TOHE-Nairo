@@ -6,8 +6,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace TOHE;
 
@@ -192,8 +192,8 @@ public static class Translator
             }
             if (!translateMaps.ContainsKey(str)) //translateMapsにない場合、StringNamesにあれば取得する
             {
-                var stringNames = EnumHelper.GetAllValues<StringNames>().Where(x => x.ToString() == str);
-                if (stringNames != null && stringNames.Any())
+                var stringNames = EnumHelper.GetAllValues<StringNames>().Where(x => x.ToString() == str).ToArray();
+                if (stringNames != null && stringNames.Length > 0)
                     res = GetString(stringNames.FirstOrDefault());
             }
         }
@@ -241,7 +241,7 @@ public static class Translator
             {
                 List<string> textStrings = new();
                 using (StreamReader reader = new(path, Encoding.GetEncoding("UTF-8")))
-                {
+                { 
                     string line;
                     while ((line = reader.ReadLine()) != null)
                     {

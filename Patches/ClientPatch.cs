@@ -1,5 +1,6 @@
 using HarmonyLib;
 using InnerNet;
+using System.Collections.Generic;
 using TOHE.Modules;
 using UnityEngine;
 using static TOHE.Translator;
@@ -60,7 +61,7 @@ internal class MMOnlineManagerStartPatch
             {
                 message = GetString("CanNotJoinPublicRoomNoLatest");
             }
-            _ = new LateTask(() => { textObj.text = $"<size=2>{Utils.ColorString(Color.red, message)}</size>"; }, 0.01f, "CanNotJoinPublic");
+            _ = new LateTask(() => { textObj.text = $"<size=2>{Utils.ColorString(Color.red, message)}</size>"; }, 0.01f, "Can Not Join Public");
         }
     }
 }
@@ -80,12 +81,31 @@ internal class SplashLogoAnimatorPatch
 internal class RunLoginPatch
 {
     public static int ClickCount = 0;
+    public static int checkCount = 0;
+    public static bool isAllowedOnline = false;
     public static void Prefix(ref bool canOnline)
     {
 #if DEBUG
         if (ClickCount < 10) canOnline = true;
         if (ClickCount >= 10) ModUpdater.forceUpdate = false;
 #endif
+    }
+
+    public static void Postfix(ref bool canOnline)
+    {
+        isAllowedOnline = canOnline;
+        var friendcode = EOSManager.Instance.friendCode;
+        if (friendcode == null || friendcode == "")
+        {
+            Logger.Info("friendcode not found", "EOSManager");
+            canOnline = false;
+        }
+
+        else if (Main.devRelease && !dbConnect.CanAccessDev(friendcode))
+        {
+            Main.hasAccess = false;
+            Logger.Warn("Banned because no access to dev", "dbConnect");
+        }
     }
 }
 [HarmonyPatch(typeof(BanMenu), nameof(BanMenu.SetVisible))]
@@ -113,10 +133,28 @@ internal class InnerNetClientCanBanPatch
 [HarmonyPatch(typeof(InnerNet.InnerNetClient), nameof(InnerNet.InnerNetClient.KickPlayer))]
 internal class KickPlayerPatch
 {
-    public static void Prefix(InnerNet.InnerNetClient __instance, int clientId, bool ban)
+    public static Dictionary<string, int> AttemptedKickPlayerList = new();
+    public static bool Prefix(InnerNet.InnerNetClient __instance, int clientId, bool ban)
     {
-        if (!AmongUsClient.Instance.AmHost) return;
+        if (!AmongUsClient.Instance.AmHost) return true;
+        if (AmongUsClient.Instance.ClientId == clientId)
+        {
+            Logger.SendInGame(string.Format("Game Attempting to {0} Host, Blocked the attempt.", ban ? "Ban" : "Kick"));
+            Logger.Info("How the fuck host are kicking it self", "KickPlayerPatch");
+            return false;
+        }
+
+        var HashedPuid = AmongUsClient.Instance.GetClient(clientId).GetHashedPuid();
+        if (!AttemptedKickPlayerList.ContainsKey(HashedPuid))
+            AttemptedKickPlayerList.Add(HashedPuid, 0);
+        else if (AttemptedKickPlayerList[HashedPuid] < 10)
+        {
+            Logger.Fatal($"Kick player Request too fast! Canceled.", "KickPlayerPatch");
+            return false;
+        }
         if (ban) BanManager.AddBanPlayer(AmongUsClient.Instance.GetRecentClient(clientId));
+
+        return true;
     }
 }
 [HarmonyPatch(typeof(ResolutionManager), nameof(ResolutionManager.SetResolution))]

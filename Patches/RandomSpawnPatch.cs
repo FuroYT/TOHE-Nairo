@@ -18,7 +18,7 @@ class RandomSpawn
             if (position == new Vector2(-25f, 40f)) return; //If it's the first spring, RETURN
             if (GameStates.IsInTask)
             {
-                var player = Main.AllPlayerControls.Where(p => p.NetTransform == __instance).FirstOrDefault();
+                var player = Main.AllPlayerControls.FirstOrDefault(p => p.NetTransform == __instance);
                 if (player == null)
                 {
                     Logger.Warn("Player is null", "RandomSpawn");
@@ -43,11 +43,13 @@ class RandomSpawn
 
                     // Reset cooldown player
                     player.RpcResetAbilityCooldown();
+
                     //return if random spawn is off
                     if (!Options.RandomSpawn.GetBool())
                     {
                         return;
                     }
+
                     new AirshipSpawnMap().RandomTeleport(player);
                 }
             }
@@ -60,14 +62,14 @@ class RandomSpawn
             var selectRand = (Options.SpawnRandomLocation.GetBool() && Options.SpawnRandomVents.GetBool()) ? IRandom.Instance.Next(0, 101) 
                 : Options.SpawnRandomLocation.GetBool() ? 50
                 : Options.SpawnRandomVents.GetBool() ? 51 : -1; // -1: Not Random Spawn
-
+            if (Options.CurrentGameMode == CustomGameMode.FFA) selectRand = 50;
             if (selectRand == -1) return;
 
             if (selectRand >= 0 && selectRand <= 50)
             {
                 var location = GetLocation();
                 Logger.Info($"{player.Data.PlayerName}:{location}", "Spawn Random Location");
-                player.RpcTeleport(new Vector2(location.x, location.y));
+                player.RpcTeleport(location);
             }
             if (selectRand >= 51 && selectRand <= 101)
             {
@@ -151,6 +153,16 @@ class RandomSpawn
             return positions.ToArray().OrderBy(_ => Guid.NewGuid()).Take(1).FirstOrDefault().Value;
         }
     }
+
+    public class DleksSpawnMap : SpawnMap
+    {
+        public Dictionary<string, Vector2> positions = new SkeldSpawnMap().positions
+            .ToDictionary(e => e.Key, e => new Vector2(-e.Value.x, e.Value.y));
+        public override Vector2 GetLocation()
+        {
+            return positions.ToArray().OrderBy(_ => Guid.NewGuid()).Take(1).FirstOrDefault().Value;
+        }
+    }
     public class AirshipSpawnMap : SpawnMap
     {
         public Dictionary<string, Vector2> positions = new()
@@ -182,7 +194,6 @@ class RandomSpawn
                 : positions.ToArray()[0..6].OrderBy(_ => Guid.NewGuid()).Take(1).FirstOrDefault().Value;
         }
     }
-
     public class FungleSpawnMap : SpawnMap
     {
         public Dictionary<string, Vector2> positions = new()

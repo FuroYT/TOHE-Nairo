@@ -10,7 +10,7 @@ namespace TOHE.Roles.Crewmate
 {
     public static class Spy
     {
-        private static readonly int Id = 640400;
+        private static readonly int Id = 9700;
         private static List<byte> playerIdList = new();
         public static bool change = false;
         public static Dictionary<byte, float> UseLimit = new();
@@ -99,8 +99,8 @@ namespace TOHE.Roles.Crewmate
                 UseLimit[target.PlayerId] -= 1;
                 SendAbilityRPC(target.PlayerId);
                 SpyRedNameList.TryAdd(killer.PlayerId, GetTimeStamp());
-                SendRPC(killer.PlayerId);
-                if (SpyInteractionBlocked.GetBool())
+                SendRPC(killer.PlayerId);                
+                if (SpyInteractionBlocked.GetBool()) 
                     killer.SetKillCooldown(time: 10f);
                 NotifyRoles(SpecifySeer: target);
                 return false;
@@ -110,7 +110,7 @@ namespace TOHE.Roles.Crewmate
         public static void OnFixedUpdate(PlayerControl pc)
         {
             if (pc == null) return;
-            if (!SpyRedNameList.Any()) return;
+            if (SpyRedNameList.Count == 0) return;
             change = false;
 
             foreach (var x in SpyRedNameList)

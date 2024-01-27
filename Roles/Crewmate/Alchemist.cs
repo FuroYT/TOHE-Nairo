@@ -1,24 +1,24 @@
 namespace TOHE.Roles.Crewmate
 {
+    using AmongUs.GameOptions;
     using HarmonyLib;
     using Hazel;
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
-    using UnityEngine;
-    using AmongUs.GameOptions;
     using TOHE.Modules;
     using TOHE.Roles.Neutral;
+    using UnityEngine;
     using static TOHE.Options;
     using static TOHE.Translator;
 
     public static class Alchemist
     {
-        private static readonly int Id = 5250;
+        private static readonly int Id = 6400;
         private static List<byte> playerIdList = new();
 
         public static Dictionary<byte, byte> BloodlustList = new();
-        private static Dictionary<byte, int> ventedId = new();
+        //private static Dictionary<byte, int> ventedId = new();
         private static Dictionary<byte, long> InvisTime = new();
 
         public static byte PotionID = 10;
@@ -54,7 +54,7 @@ namespace TOHE.Roles.Crewmate
             BloodlustList = new();
             PotionID = 10;
             PlayerName = string.Empty;
-            ventedId = new();
+            //ventedId = new();
             InvisTime = new();
             FixNextSabo = false;
             VisionPotionActive = false;
@@ -64,7 +64,7 @@ namespace TOHE.Roles.Crewmate
             playerIdList.Add(playerId);
             PlayerName = Utils.GetPlayerById(playerId).GetRealName();
         }
-        public static bool IsEnable => playerIdList.Any();
+        public static bool IsEnable => playerIdList.Count > 0;
 
         public static void OnTaskComplete(PlayerControl pc)
         {
@@ -109,31 +109,41 @@ namespace TOHE.Roles.Crewmate
                 case 1: // Shield
                     IsProtected = true;
                     player.Notify(GetString("AlchemistShielded"), ShieldDuration.GetInt());
-                    _ = new LateTask(() => { IsProtected = false; player.Notify(GetString("AlchemistShieldOut")); }, ShieldDuration.GetInt());
+
+                    _ = new LateTask(() =>
+                    {
+                        IsProtected = false;
+                        player.Notify(GetString("AlchemistShieldOut"));
+
+                    }, ShieldDuration.GetInt(), "Alchemist Shield Is Out");
                     break;
                 case 2: // Suicide
                     player.MyPhysics.RpcBootFromVent(ventId);
                     _ = new LateTask(() =>
                     {
+                        Main.PlayerStates[player.PlayerId].deathReason = PlayerState.DeathReason.Poison;
                         player.SetRealKiller(player);
                         player.RpcMurderPlayerV3(player);
-                        Main.PlayerStates[player.PlayerId].deathReason = PlayerState.DeathReason.Poison;
-                    }, 1f);
+
+                    }, 1f, "Alchemist Is Poisoned");
                     break;
                 case 3: // TP to random player
                     _ = new LateTask(() =>
                     {
                         var rd = IRandom.Instance;
                         List<PlayerControl> AllAlivePlayer = new();
-                        foreach (var pc in Main.AllAlivePlayerControls.Where(x => x.CanBeTeleported())) AllAlivePlayer.Add(pc);
+                        foreach (var pc in Main.AllAlivePlayerControls.Where(x => x.CanBeTeleported()).ToArray())
+                        {
+                            AllAlivePlayer.Add(pc);
+                        }
                         var tar1 = AllAlivePlayer[player.PlayerId];
                         AllAlivePlayer.Remove(tar1);
                         var tar2 = AllAlivePlayer[rd.Next(0, AllAlivePlayer.Count)];
-                        tar1.RpcTeleport(tar2.GetTruePosition());
+                        tar1.RpcTeleport(tar2.GetCustomPosition());
                         tar1.RPCPlayCustomSound("Teleport");
-                    }, 2f);
+                    }, 2f, "Alchemist teleported to random player");
                     break;
-                case 4: // Increased speed
+                case 4: // Increased speed?? Right now it's only water (do nothing) case.
                     player.Notify(GetString("AlchemistPotionDidNothing"));
                     break;
                 case 5: // Quick fix next sabo
@@ -150,7 +160,13 @@ namespace TOHE.Roles.Crewmate
                     VisionPotionActive = true;
                     player.MarkDirtySettings();
                     player.Notify(GetString("AlchemistHasVision"), VisionDuration.GetFloat());
-                    _ = new LateTask(() => { VisionPotionActive = false; player.MarkDirtySettings(); player.Notify(GetString("AlchemistVisionOut")); }, VisionDuration.GetFloat());
+                    _ = new LateTask(() =>
+                    { 
+                        VisionPotionActive = false;
+                        player.MarkDirtySettings();
+                        player.Notify(GetString("AlchemistVisionOut"));
+
+                    }, VisionDuration.GetFloat(), "Alchemist Vision Is Out");
                     break;
                 case 10:
                     player.Notify("NoPotion");
@@ -200,7 +216,7 @@ namespace TOHE.Roles.Crewmate
                         targetDistance.Add(target.PlayerId, dis);
                     }
                 }
-                if (targetDistance.Any())
+                if (targetDistance.Count > 0)
                 {
                     var min = targetDistance.OrderBy(c => c.Value).FirstOrDefault();
                     PlayerControl target = Utils.GetPlayerById(min.Key);
@@ -216,8 +232,7 @@ namespace TOHE.Roles.Crewmate
                             player.MarkDirtySettings();
                             target.MarkDirtySettings();
                             BloodlustList.Remove(player.PlayerId);
-                            Utils.NotifyRoles(SpecifySeer: player);
-                            Utils.NotifyRoles(SpecifySeer: target);
+                            Utils.NotifyRoles(SpecifySeer: Utils.GetPlayerById(bloodlustId), SpecifyTarget: player, ForceLoop: true);
                         }
                     }
                 }

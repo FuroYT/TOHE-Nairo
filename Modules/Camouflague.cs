@@ -1,6 +1,5 @@
 using AmongUs.Data;
 using System.Collections.Generic;
-using System.Linq;
 using TOHE.Roles.Impostor;
 using TOHE.Roles.Neutral;
 
@@ -8,7 +7,7 @@ namespace TOHE;
 
 static class PlayerOutfitExtension
 {
-    public static GameData.PlayerOutfit Set(this GameData.PlayerOutfit instance, string playerName, int colorId, string hatId, string skinId, string visorId, string petId,  string nameplateId)
+    public static GameData.PlayerOutfit Set(this GameData.PlayerOutfit instance, string playerName, int colorId, string hatId, string skinId, string visorId, string petId, string nameplateId)
     {
         instance.PlayerName = playerName;
         instance.ColorId = colorId;
@@ -35,18 +34,32 @@ static class PlayerOutfitExtension
 }
 public static class Camouflage
 {
+    public static bool IsCamouflage;
+
     static GameData.PlayerOutfit CamouflageOutfit = new GameData.PlayerOutfit().Set("", 15, "", "", "", "", ""); // Default
 
-    public static bool IsCamouflage;
+    public static List<byte> ResetSkinAfterDeathPlayers = new();
     public static Dictionary<byte, GameData.PlayerOutfit> PlayerSkins = new();
+    public static bool IsActive;
 
     public static void Init()
     {
         IsCamouflage = false;
         PlayerSkins.Clear();
+        ResetSkinAfterDeathPlayers = new();
+
+        IsActive = Options.CommsCamouflage.GetBool() && !(Options.DisableOnSomeMaps.GetBool() &&
+            (
+            (Options.DisableOnSkeld.GetBool() && Options.IsActiveSkeld) ||
+            (Options.DisableOnMira.GetBool() && Options.IsActiveMiraHQ) ||
+            (Options.DisableOnPolus.GetBool() && Options.IsActivePolus) ||
+            (Options.DisableOnDleks.GetBool() && Options.IsActiveDleks) ||
+            (Options.DisableOnFungle.GetBool() && Options.IsActiveFungle) ||
+            (Options.DisableOnAirship.GetBool() && Options.IsActiveAirship)
+            ));
 
         switch (Options.KPDCamouflageMode.GetValue())
-        { 
+        {
             case 0: // Default
                 CamouflageOutfit = new GameData.PlayerOutfit()
                     .Set("", 15, "", "", "", "", "");
@@ -76,9 +89,20 @@ public static class Camouflage
                 CamouflageOutfit = new GameData.PlayerOutfit()
                     .Set("", 17, "hat_pkHW01_Witch", "skin_greedygrampaskin", "visor_Plsno", "pet_Pusheen", "");
                 break;
+
             case 6: // ryuk
                 CamouflageOutfit = new GameData.PlayerOutfit()
                     .Set("", 7, "hat_crownDouble", "skin_D2Saint14", "visor_anime", "pet_Bush", "");
+                break;
+
+            case 7: // Gurge44
+                CamouflageOutfit = new GameData.PlayerOutfit()
+                    .Set("", 7, "hat_pk04_Snowman", "", "", "", "");
+                break;
+
+            case 8: // TommyXL
+                CamouflageOutfit = new GameData.PlayerOutfit()
+                    .Set("", 17, "hat_baseball_Black", "skin_Scientist-Darkskin", "visor_pusheenSmileVisor", "pet_Pip", "");
                 break;
         }
     }
@@ -88,21 +112,18 @@ public static class Camouflage
 
         var oldIsCamouflage = IsCamouflage;
 
-        IsCamouflage = (Utils.IsActive(SystemTypes.Comms) && Options.CommsCamouflage.GetBool()
-            && !(Options.DisableOnSomeMaps.GetBool() &&
-            ((Options.DisableOnSkeld.GetBool() && Options.IsActiveSkeld) ||
-             (Options.DisableOnMira.GetBool() && Options.IsActiveMiraHQ) ||
-             (Options.DisableOnPolus.GetBool() && Options.IsActivePolus) ||
-             (Options.DisableOnFungle.GetBool() && Options.IsActiveFungle) ||
-             (Options.DisableOnAirship.GetBool() && Options.IsActiveAirship)
-            )))
-            || Camouflager.IsActive;
+        IsCamouflage = (Utils.IsActive(SystemTypes.Comms) && IsActive) || Camouflager.AbilityActivated;
 
         if (oldIsCamouflage != IsCamouflage)
         {
             foreach (var pc in Main.AllPlayerControls)
             {
                 RpcSetSkin(pc);
+
+                if (!IsCamouflage && !pc.IsAlive())
+                {
+                    pc.RpcRemovePet();
+                }
             }
             Utils.NotifyRoles(NoCache: true);
         }
@@ -114,12 +135,9 @@ public static class Camouflage
 
         var id = target.PlayerId;
 
-        if (IsCamouflage)
+        if (IsCamouflage && Main.PlayerStates[id].IsDead)
         {
-            //コミュサボ中
-
-            //死んでいたら処理しない
-            if (Main.PlayerStates[id].IsDead) return;
+            return;
         }
 
         var newOutfit = CamouflageOutfit;
@@ -149,7 +167,10 @@ public static class Camouflage
                 newOutfit = PlayerSkins[id];
             }
         }
-        Logger.Info($"newOutfit={newOutfit.GetString()}", "RpcSetSkin");
+        // if the current Outfit is the same, return it
+        if (newOutfit.Compare(target.Data.DefaultOutfit)) return;
+
+        Logger.Info($"newOutfit={newOutfit.GetString().RemoveHtmlTags()}", "RpcSetSkin");
 
         var sender = CustomRpcSender.Create(name: $"Camouflage.RpcSetSkin({target.Data.PlayerName})");
 

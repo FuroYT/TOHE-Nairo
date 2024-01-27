@@ -7,13 +7,12 @@ using System.Text.RegularExpressions;
 using TOHE.Modules.ChatManager;
 using UnityEngine;
 using static TOHE.Translator;
-using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace TOHE.Roles.Crewmate;
 
 public static class Swapper
 {
-    private static readonly int Id = 1986523;
+    private static readonly int Id = 12400;
     public static bool IsEnable = false;
     public static OptionItem SwapMax;
     public static OptionItem CanSwapSelf;
@@ -52,7 +51,7 @@ public static class Swapper
         var originMsg = msg;
 
         if (!AmongUsClient.Instance.AmHost) return false;
-        if (!GameStates.IsInGame || pc == null) return false;
+        if (!GameStates.IsMeeting || pc == null || GameStates.IsExilling) return false;
         if (!pc.Is(CustomRoles.Swapper)) return false;
 
         int operate = 0;
@@ -135,7 +134,7 @@ public static class Swapper
                     if (!isUI) Utils.SendMessage(GetString("CantSwapSelf"), pc.PlayerId);
                     else pc.ShowPopUp(GetString("CantSwapSelf"));
                 }
-                _= new LateTask(() =>
+                _ = new LateTask(() =>
                 {
                         if (Vote.Count > 0 && VoteTwo.Count > 0)
                         {
@@ -153,7 +152,7 @@ public static class Swapper
                         else pc.ShowPopUp(string.Format(GetString("SwapVoteC"), player1.GetRealName(), player2.GetRealName()));
                     }
                     Utils.NotifyRoles(isForMeeting: true, NoCache: true);
-                }, 0.2f);
+                }, 0.2f, "Players Was Swaped");
             }
         }
         return true;

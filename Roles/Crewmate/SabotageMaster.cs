@@ -5,7 +5,7 @@ namespace TOHE.Roles.Crewmate;
 
 public static class SabotageMaster
 {
-    private static readonly int Id = 7000;
+    private static readonly int Id = 8500;
     public static List<byte> playerIdList = new();
     public static bool IsEnable = false;
 
@@ -131,6 +131,7 @@ public static class SabotageMaster
                 DoorsProgressing = false;
                 break;
         }
+        Utils.NotifyRoles(SpecifySeer: Utils.GetPlayerById(playerId));
     }
     public static void SwitchSystemRepair(SwitchSystem __instance, byte amount, byte playerId)
     {

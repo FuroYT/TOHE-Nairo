@@ -25,7 +25,7 @@ public static class RetributionistRevengeManager
             else pc.ShowPopUp(GetString("RetributionistKillDisable"));
             return true;
         }
-        int playerCount = Main.AllAlivePlayerControls.Count();
+        int playerCount = Main.AllAlivePlayerControls.Length;
         {
             if (playerCount <= Options.MinimumPlayersAliveToRetri.GetInt())
             {
@@ -96,16 +96,22 @@ public static class RetributionistRevengeManager
             else pc.ShowPopUp(GetString("RetributionistKillDead"));
             return true;
         }
-        if (target.Is(CustomRoles.Pestilence))
+        else if (target.Is(CustomRoles.Pestilence))
         {
             if (!isUI) Utils.SendMessage(GetString("PestilenceImmune"), pc.PlayerId);
             else pc.ShowPopUp(GetString("PestilenceImmune"));
             return true;
         }
-        if (target.Is(CustomRoles.NiceMini) && Mini.Age < 18)
+        else if (target.Is(CustomRoles.NiceMini) && Mini.Age < 18 )
         {
             if (!isUI) Utils.SendMessage(GetString("GuessMini"), pc.PlayerId);
             else pc.ShowPopUp(GetString("GuessMini"));
+            return true;
+        }
+        else if (target.Is(CustomRoles.Solsticer))
+        {
+            if (!isUI) Utils.SendMessage(GetString("GuessSolsticer"), pc.PlayerId);
+            else pc.ShowPopUp(GetString("GuessSolsticer"));
             return true;
         }
 
@@ -137,9 +143,9 @@ public static class RetributionistRevengeManager
                 Main.PlayerStates[target.PlayerId].SetDead();
             }
 
-            _ = new LateTask(() => { Utils.SendMessage(string.Format(GetString("RetributionistKillSucceed"), Name), 255, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Retributionist), GetString("RetributionistRevengeTitle"))); }, 0.6f, "Retributionist Kill");
+            _ = new LateTask(() => { Utils.SendMessage(string.Format(GetString("RetributionistKillSucceed"), Name), 255, Utils.ColorString(Utils.GetRoleColor(CustomRoles.Retributionist), GetString("RetributionistRevengeTitle")), true); }, 0.6f, "Retributionist Kill");
 
-        }, 0.2f, "Retributionist Kill");
+        }, 0.2f, "Retributionist Start Kill");
         return true;
     }
 
@@ -175,7 +181,7 @@ public static class RetributionistRevengeManager
     }
     public static void CreateJudgeButton(MeetingHud __instance)
     {
-        foreach (var pva in __instance.playerStates)
+        foreach (var pva in __instance.playerStates.ToArray())
         {
             var pc = Utils.GetPlayerById(pva.TargetPlayerId);
             if (pc == null || !pc.IsAlive()) continue;

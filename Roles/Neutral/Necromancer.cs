@@ -1,7 +1,6 @@
 ﻿using AmongUs.GameOptions;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 using static TOHE.Options;
 using static TOHE.Translator;
 
@@ -9,7 +8,7 @@ namespace TOHE.Roles.Neutral;
 
 public static class Necromancer
 {
-    private static readonly int Id = 12820;
+    private static readonly int Id = 17100;
     public static List<byte> playerIdList = new();
 
     private static OptionItem KillCooldown;
@@ -50,7 +49,7 @@ public static class Necromancer
         if (!Main.ResetCamPlayerList.Contains(playerId))
             Main.ResetCamPlayerList.Add(playerId);
     }
-    public static bool IsEnable => playerIdList.Any();
+    public static bool IsEnable => playerIdList.Count > 0;
     public static void SetKillCooldown(byte id) => Main.AllPlayerKillCooldown[id] = KillCooldown.GetFloat();
     public static void ApplyGameOptions(IGameOptions opt) => opt.SetVision(HasImpostorVision.GetBool());
     public static bool OnKillAttempt(PlayerControl killer, PlayerControl target)
@@ -83,7 +82,7 @@ public static class Necromancer
             Killer = null; 
             return;
         }
-        if (seconds <= 0 || GameStates.IsMeeting) 
+        if (seconds <= 0 || GameStates.IsMeeting && player.IsAlive()) 
         { 
             player.RpcMurderPlayerV3(player); 
             player.SetRealKiller(killer);
@@ -93,7 +92,7 @@ public static class Necromancer
         player.Notify(string.Format(GetString("NecromancerRevenge"), seconds, Killer.GetRealName()), 1.1f);
         Timer = seconds;
 
-        _ = new LateTask(() => { Countdown(seconds - 1, player); }, 1.01f);
+        _ = new LateTask(() => { Countdown(seconds - 1, player); }, 1.01f, "Necromancer Countdown");
     }
     public static bool OnCheckMurder(PlayerControl killer, PlayerControl target)
     {

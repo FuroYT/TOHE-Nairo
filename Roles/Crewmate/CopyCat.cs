@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Collections.Generic;
 using static TOHE.Options;
 using static TOHE.Translator;
@@ -7,7 +6,7 @@ namespace TOHE.Roles.Crewmate;
 
 public static class CopyCat
 {
-    private static readonly int Id = 31000;
+    private static readonly int Id = 11500;
     public static List<byte> playerIdList = new();
     public static bool IsEnable = false;
 
@@ -66,7 +65,7 @@ public static class CopyCat
           else
               MiscopyLimit.Add(CopyCatId, MiscopyLimitOpt.GetInt());
       } */
-    public static void SetKillCooldown(byte id) => Main.AllPlayerKillCooldown[id] = Utils.GetPlayerById(id).IsAlive() ? CurrentKillCooldown[id] : 0f;
+    public static void SetKillCooldown(byte id) => Main.AllPlayerKillCooldown[id] = Utils.GetPlayerById(id).IsAlive() ? CurrentKillCooldown[id] : 300f;
 
     public static void AfterMeetingTasks()
     {
@@ -186,6 +185,18 @@ public static class CopyCat
                     break;
                 case CustomRoles.Admirer:
                     Admirer.AdmirerLimit.Remove(pc.PlayerId);
+                    break;
+                case CustomRoles.Benefactor:
+                    Benefactor.TaskMarkPerRound.Remove(pc.PlayerId);
+                    break;
+                case CustomRoles.Keeper:
+                    Keeper.Remove(pc.PlayerId);
+                    break;
+                case CustomRoles.Swapper:
+                    Swapper.Swappermax.Remove(pc.PlayerId);
+                    break;
+                case CustomRoles.GuessMaster:
+                    GuessMaster.Remove(pc.PlayerId);
                     break;
             }
             pc.RpcSetCustomRole(CustomRoles.CopyCat);
@@ -399,6 +410,18 @@ public static class CopyCat
                     break;
                 case CustomRoles.Admirer:
                     Admirer.AdmirerLimit.Add(pc.PlayerId, Admirer.SkillLimit.GetInt());
+                    break;
+                case CustomRoles.Benefactor:
+                    Benefactor.TaskMarkPerRound[pc.PlayerId] = 0;
+                    break;
+                case CustomRoles.Keeper:
+                    Keeper.Add(pc.PlayerId);
+                    break;
+                case CustomRoles.Swapper:
+                    Swapper.Swappermax.TryAdd(pc.PlayerId, Swapper.SwapMax.GetInt());
+                    break;
+                case CustomRoles.GuessMaster:
+                    GuessMaster.Add(pc.PlayerId);
                     break;
             }
 

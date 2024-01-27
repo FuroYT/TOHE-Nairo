@@ -1,16 +1,17 @@
-﻿using Hazel;
+﻿using AmongUs.GameOptions;
+using Hazel;
 using System.Collections.Generic;
 using System.Linq;
-using AmongUs.GameOptions;
 using TOHE.Roles.Crewmate;
-using UnityEngine;
 using TOHE.Roles.Double;
-namespace TOHE.Roles.Neutral;
+using UnityEngine;
 using static TOHE.Translator;
+
+namespace TOHE.Roles.Neutral;
 
 public static class Pelican
 {
-    private static readonly int Id = 12500;
+    private static readonly int Id = 17300;
     private static List<byte> playerIdList = new();
     public static bool IsEnable = false;
     private static Dictionary<byte, List<byte>> eatenList = new();
@@ -51,7 +52,7 @@ public static class Pelican
     }
     private static void SendRPC(byte playerId)
     {
-        MessageWriter writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.SetPelicanEtenNum, SendOption.Reliable, -1);
+        MessageWriter writer = AmongUsClient.Instance.StartRpcImmediately(PlayerControl.LocalPlayer.NetId, (byte)CustomRPC.SetPelicanEatenNum, SendOption.Reliable, -1);
         writer.Write(playerId);
         if (playerId != byte.MaxValue)
         {
@@ -93,13 +94,14 @@ public static class Pelican
         var target = Utils.GetPlayerById(id);
         return target != null && target.CanBeTeleported() && !Medic.ProtectList.Contains(target.PlayerId) && !target.Is(CustomRoles.GM) && !IsEaten(pc, id) && !IsEaten(id);
     }
-    public static Vector2 GetBlackRoomPS()
+    public static Vector2 GetBlackRoomPSForPelican()
     {
         return Main.NormalOptions.MapId switch
         {
             0 => new Vector2(-27f, 3.3f), // The Skeld
             1 => new Vector2(-11.4f, 8.2f), // MIRA HQ
             2 => new Vector2(42.6f, -19.9f), // Polus
+            3 => new Vector2(27f, 3.3f), // dlekS ehT
             4 => new Vector2(-16.8f, -6.2f), // Airship
             5 => new Vector2(9.6f, 23.2f), // The Fungle
             _ => throw new System.NotImplementedException(),
@@ -132,14 +134,15 @@ public static class Pelican
         originalSpeed.Remove(target.PlayerId);
         originalSpeed.Add(target.PlayerId, Main.AllPlayerSpeed[target.PlayerId]);
 
-        target.RpcTeleport(new Vector2 (GetBlackRoomPS().x, GetBlackRoomPS().y));
+        target.RpcTeleport(GetBlackRoomPSForPelican());
         Main.AllPlayerSpeed[target.PlayerId] = 0.5f;
         ReportDeadBodyPatch.CanReport[target.PlayerId] = false;
         target.MarkDirtySettings();
 
         Utils.NotifyRoles(SpecifySeer: pc);
         Utils.NotifyRoles(SpecifySeer: target);
-        Logger.Info($"{pc.GetRealName()} 吞掉了 {target.GetRealName()}", "Pelican");
+
+        Logger.Info($"{pc.GetRealName()} eat player => {target.GetRealName()}", "Pelican");
     }
 
     public static void OnReportDeadBody()
@@ -168,27 +171,34 @@ public static class Pelican
     public static void OnPelicanDied(byte pc)
     {
         if (!eatenList.ContainsKey(pc)) return;
+
         foreach (var tar in eatenList[pc])
         {
             var target = Utils.GetPlayerById(tar);
             var player = Utils.GetPlayerById(pc);
             if (player == null || target == null) continue;
-            target.RpcTeleport(player.GetTruePosition());
+
+            target.RpcTeleport(player.GetCustomPosition());
+
             Main.AllPlayerSpeed[tar] = Main.AllPlayerSpeed[tar] - 0.5f + originalSpeed[tar];
             ReportDeadBodyPatch.CanReport[tar] = true;
+            
             target.MarkDirtySettings();
+            
             RPC.PlaySoundRPC(tar, Sounds.TaskComplete);
-            Utils.NotifyRoles(SpecifySeer: target);
-            Logger.Info($"{Utils.GetPlayerById(pc).GetRealName()} 吐出了 {target.GetRealName()}", "Pelican");
+            
+            Logger.Info($"{Utils.GetPlayerById(pc).GetRealName()} dead, player return back: {target.GetRealName()}", "Pelican");
         }
         eatenList.Remove(pc);
         SyncEatenList(pc);
+        Utils.NotifyRoles();
     }
+
     public static void OnFixedUpdate()
     {
         if (!GameStates.IsInTask)
         {
-            if (eatenList.Any())
+            if (eatenList.Count > 0)
             {
                 eatenList.Clear();
                 SyncEatenList(byte.MaxValue);
@@ -198,21 +208,23 @@ public static class Pelican
         
         Count--;
         
-        if (Count > 0) return;
-
+        if (Count > 0) return; 
+        
         Count = 15;
 
         foreach (var pc in eatenList)
         {
-            foreach (var tar in pc.Value)
+            foreach (var tar in pc.Value.ToArray())
             {
                 var target = Utils.GetPlayerById(tar);
                 if (target == null) continue;
-                var pos = GetBlackRoomPS();
-                var dis = Vector2.Distance(pos, target.GetTruePosition());
+
+                var pos = GetBlackRoomPSForPelican();
+                var dis = Vector2.Distance(pos, target.GetCustomPosition());
                 if (dis < 1f) continue;
+
                 target.RpcTeleport(pos);
-                Utils.NotifyRoles(SpecifySeer: target, ForceLoop: false);
+                //Utils.NotifyRoles(SpecifySeer: target, ForceLoop: false);
             }
         }
     }

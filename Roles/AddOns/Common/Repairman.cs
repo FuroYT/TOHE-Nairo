@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 
-namespace TOHE.Roles.Crewmate;
+namespace TOHE.Roles.AddOns.Common;
 
 public static class Repairman
 {
-    private static readonly int Id = 7050;
+    private static readonly int Id = 19900;
     public static List<byte> playerIdList = new();
     public static bool IsEnable = false;
 
@@ -41,7 +41,7 @@ public static class Repairman
         playerIdList.Add(playerId);
         IsEnable = true;
     }
-    public static void RepairSystem(ShipStatus __instance, SystemTypes systemType, byte amount)
+    public static void RepairSystem(ShipStatus __instance, SystemTypes systemType, byte amount, byte playerId)
     {
         switch (systemType)
         {
@@ -106,6 +106,7 @@ public static class Repairman
                 DoorsProgressing = false;
                 break;
         }
+        Utils.NotifyRoles(SpecifySeer: Utils.GetPlayerById(playerId));
     }
     public static void SwitchSystemRepair(SwitchSystem __instance, byte amount)
     {

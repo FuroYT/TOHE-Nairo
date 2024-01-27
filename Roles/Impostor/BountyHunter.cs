@@ -1,6 +1,7 @@
 using Hazel;
 using System.Collections.Generic;
 using System.Linq;
+using TOHE.Roles.Neutral;
 using UnityEngine;
 using static TOHE.Translator;
 
@@ -112,7 +113,7 @@ public static class BountyHunter
             if (ChangeTimer[player.PlayerId] >= TargetChangeTime)//時間経過でターゲットをリセットする処理
             {
                 ResetTarget(player);//ターゲットの選びなおし
-                Utils.NotifyRoles(SpecifySeer: player);
+                Utils.NotifyRoles(SpecifySeer: player, ForceLoop: true);
             }
             if (ChangeTimer[player.PlayerId] >= 0)
                 ChangeTimer[player.PlayerId] += Time.fixedDeltaTime;
@@ -122,7 +123,7 @@ public static class BountyHunter
             {
                 ResetTarget(player);
                 Logger.Info($"{player.GetNameWithRole()}のターゲットが無効だったため、ターゲットを更新しました", "BountyHunter");
-                Utils.NotifyRoles(SpecifySeer: player);
+                Utils.NotifyRoles(SpecifySeer: player, ForceLoop: true);
             }
         }
     }
@@ -140,6 +141,42 @@ public static class BountyHunter
         var targetId = GetTarget(player);
         return targetId == 0xff ? null : Utils.GetPlayerById(targetId);
     }
+    public static bool PotentialTarget(this PlayerControl player, PlayerControl target)
+    {
+        if (target == null || player == null) return false;
+
+        if (player.Is(CustomRoles.Lovers) && target.Is(CustomRoles.Lovers)) return false;
+
+        if (target.Is(CustomRoles.Romantic)
+            && ((Romantic.BetPlayer.TryGetValue(target.PlayerId, out byte romanticPartner) && romanticPartner == player.PlayerId))) return false;
+
+        if (target.Is(CustomRoles.Lawyer)
+            && ((Lawyer.Target.TryGetValue(target.PlayerId, out byte lawyerTarget) && lawyerTarget == player.PlayerId) && Lawyer.TargetKnowsLawyer.GetBool())) return false;
+
+        if (player.Is(CustomRoles.Charmed)
+            && (target.Is(CustomRoles.Succubus) || (target.Is(CustomRoles.Charmed) && Succubus.TargetKnowOtherTarget.GetBool()))) return false;
+
+        if (player.Is(CustomRoles.Infected)
+            && (target.Is(CustomRoles.Infectious) || (target.Is(CustomRoles.Infected) && Infectious.TargetKnowOtherTarget.GetBool()))) return false;
+
+        if (player.Is(CustomRoles.Recruit)
+            && (target.Is(CustomRoles.Jackal) || target.Is(CustomRoles.Recruit) || target.Is(CustomRoles.Sidekick))) return false;
+
+        if (player.Is(CustomRoles.Contagious)
+            && target.Is(CustomRoles.Virus) || (target.Is(CustomRoles.Contagious) && Virus.TargetKnowOtherTarget.GetBool())) return false;
+
+        if (player.Is(CustomRoles.Admired)
+            && target.Is(CustomRoles.Admirer) || target.Is(CustomRoles.Admired)) return false;
+
+        if (player.Is(CustomRoles.Soulless)
+            && target.Is(CustomRoles.CursedSoul) || target.Is(CustomRoles.Soulless)) return false;
+
+        if (target.GetCustomRole().IsImpostor()
+            || ((target.GetCustomRole().IsMadmate() || target.Is(CustomRoles.Madmate)) && Options.ImpKnowWhosMadmate.GetBool())) return false;
+
+        return true;
+
+    }
     public static byte ResetTarget(PlayerControl player)
     {
         if (!AmongUsClient.Instance.AmHost) return 0xff;
@@ -151,12 +188,12 @@ public static class BountyHunter
         Logger.Info($"{player.GetNameWithRole()}:ターゲットリセット", "BountyHunter");
         player.RpcResetAbilityCooldown(); ;//タイマー（変身クールダウン）のリセットと
 
-        var cTargets = new List<PlayerControl>(Main.AllAlivePlayerControls.Where(pc => !pc.Is(CustomRoleTypes.Impostor)));
+        var cTargets = new List<PlayerControl>(Main.AllAlivePlayerControls.Where(pc => player.PotentialTarget(pc)));
 
         if (cTargets.Count >= 2 && Targets.TryGetValue(player.PlayerId, out var nowTarget))
             cTargets.RemoveAll(x => x.PlayerId == nowTarget); //前回のターゲットは除外
 
-        if (!cTargets.Any())
+        if (cTargets.Count == 0)
         {
             Logger.Warn("ターゲットの指定に失敗しました:ターゲット候補が存在しません", "BountyHunter");
             return 0xff;
